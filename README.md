@@ -39,11 +39,49 @@ your-project/
 
 GPT proposed project structure:(SQLite)
 ```
-backend/
-├── models/
-│   └── tag.py           # 放置 Tag 类
-├── database.py          # 初始化 SQLite 引擎和 session
-├── app.py               # 启动 Flask 服务
-└── mydatabase.db        # SQLite 数据库文件（自动生成）
+├── backend/                        # 后端代码根目录
+│   ├── app.py                      # Flask 应用主入口，挂载所有蓝图
+│   ├── database.py                 # SQLite 连接封装（含外键开启）
+│   ├── init_db.py                  # 创建数据库和 6 张表结构（你已完成）
+│   ├── mydatabase.db               # SQLite 数据文件（自动生成）
+│
+│   ├── routes/                     # 路由功能模块（按功能拆分）
+│   │   ├── tags.py                 # 标签模块（创建、获取标签）
+│   │   ├── files.py                # 文件上传、查询
+│   │   ├── folders.py              # 文件夹创建/获取/树形结构
+│   │   └── search.py               # 搜索：通过标签名或别名找文件
+│
+│   ├── utils/                      # 工具类（UUID、路径、校验等）
+│   │   ├── idgen.py                # 生成 UUID 字符串
+│   │   ├── file_helper.py          # 上传文件路径处理等（可选）
+│   │   └── validation.py           # 参数验证函数（可选）
+│
+│   └── config.py                   # 项目配置（数据库路径、上传目录等）
+├── uploads/                        # 上传文件的存储目录
+│   └── ...                         # 文件系统结构自定义
+└── README.md                       # 项目说明
+
+```
+
+```
+功能类型	路径	方法	描述
+上传文件	/api/files/upload	POST	上传文件并指定所属文件夹和标签
+文件列表	/api/files	GET	分页获取所有文件
+文件详情	/api/files/<file_id>	GET	获取单个文件信息
+删除文件	/api/files/<file_id>	DELETE	删除文件及关联
+
+功能类型	路径	方法	描述
+获取文件夹	/api/folders/tree	GET	获取所有文件夹层级结构
+创建文件夹	/api/folders	POST	新建文件夹（支持 parent_id）
+删除文件夹	/api/folders/<folder_id>	DELETE	删除指定文件夹
+
+功能类型	路径	方法	描述
+获取标签	/api/tags	GET	获取所有标签（可按分类筛选）
+添加标签	/api/tags	POST	新建标签
+添加别名	/api/tags/<tag_id>/alias	POST	给指定标签添加一个别名
+
+功能类型	路径	方法	描述
+搜索文件	/api/search?q=xxx	GET	输入 tag 名或 alias，查文件
+多条件搜索	/api/search?q=xxx&folder=...&tag=...	GET	组合搜索
 
 ```
