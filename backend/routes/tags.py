@@ -59,11 +59,16 @@ def create_tag():
 
     try:
         with get_db() as (conn, cursor):
-            cursor.execute(
-                "INSERT INTO tags (name, category) VALUES (?, ?)",
-                (name.strip(), category.strip())
-            )
-            tag_id = cursor.lastrowid
+            cursor.execute("SELECT id FROM tags WHERE name = ? AND category = ?", (name.strip(), category.strip()))
+            existing = cursor.fetchone()
+            if existing:
+                return error("标签已存在", 409)
+
+        cursor.execute(
+            "INSERT INTO tags (name, category) VALUES (?, ?)",
+            (name.strip(), category.strip())
+        )
+        tag_id = cursor.lastrowid
     except Exception as e:
         return error(f"数据库写入失败：{str(e)}", 500)
 
