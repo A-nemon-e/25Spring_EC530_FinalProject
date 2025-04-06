@@ -1,0 +1,12 @@
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 数据库文件（你只在本地测试用）
+*.db
+
+# 上传的文件
+uploads/
+

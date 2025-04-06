@@ -1,7 +1,10 @@
 import sqlite3
+import os
 from contextlib import contextmanager
 
-DATABASE_PATH = "mydatabase.db"  # 你生成的 SQLite 文件路径
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATABASE_PATH = os.path.join(BASE_DIR, "mydatabase.db")
+# DATABASE_PATH = "mydatabase.db"  # 你生成的 SQLite 文件路径
 
 @contextmanager
 def get_db():

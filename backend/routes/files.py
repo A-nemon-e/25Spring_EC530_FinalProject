@@ -15,6 +15,62 @@ MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB 限制
 
 @files_bp.route("/upload", methods=["POST"])
 def upload_file():
+    
+    """
+    上传文件
+    ---
+    tags:
+      - 文件
+    consumes:
+      - multipart/form-data
+    parameters:
+      - name: file
+        in: formData
+        type: file
+        required: true
+        description: 要上传的 PDF 文件
+    responses:
+      201:
+        description: 上传成功，返回文件信息
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: success
+            code:
+              type: integer
+              example: 201
+            data:
+              type: object
+              properties:
+                file_id:
+                  type: string
+                  example: 36b0521f-27c1-4a0c-b2b0-68a6c10f1581
+                name:
+                  type: string
+                  example: 总谱1.pdf
+                uploaded_at:
+                  type: string
+                  example: 2025-03-28T20:12:35.130474+00:00
+            error:
+              type: string
+              example: null
+      400:
+        description: 参数错误或缺失
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: error
+            code:
+              type: integer
+              example: 400
+            error:
+              type: string
+              example: 缺少文件
+    """
     file = request.files.get("file")
     if not file:
         return error("缺少文件", 400)
