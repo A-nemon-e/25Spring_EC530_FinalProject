@@ -53,7 +53,7 @@ GPT proposed project structure:(SQLite)
 │
 │   ├── utils/                      # 工具类（UUID、路径、校验等）
 │   │   ├── idgen.py                # 生成 UUID 字符串
-│   │   ├── file_helper.py          # 上传文件路径处理等（可选）
+│   │   ├── response.py             # 统一Json回复格式
 │   │   └── validation.py           # 参数验证函数（可选）
 │
 │   └── config.py                   # 项目配置（数据库路径、上传目录等）
@@ -62,7 +62,7 @@ GPT proposed project structure:(SQLite)
 └── README.md                       # 项目说明
 
 ```
-
+### 路由
 ```
 功能类型	路径	方法	描述
 上传文件	/api/files/upload	POST	上传文件并指定所属文件夹和标签
@@ -83,5 +83,92 @@ GPT proposed project structure:(SQLite)
 功能类型	路径	方法	描述
 搜索文件	/api/search?q=xxx	GET	输入 tag 名或 alias，查文件
 多条件搜索	/api/search?q=xxx&folder=...&tag=...	GET	组合搜索
+
+```
+
+
+### 表：表设计
+
+```
+*files*
+
+    id
+
+    name
+
+    upload_path
+
+    size
+
+    uploaded_at
+
+*folders*
+
+    id
+
+    name
+
+    parent_id (支持嵌套)
+
+    created_at
+
+*file_folders*（中间表）
+
+    file_id
+
+    folder_id
+
+*tags*
+
+    id
+
+    name
+
+    category
+
+*tag_aliases*
+
+    tag_id
+
+    alias
+
+*file_tags*
+
+    file_id
+
+    tag_id
+```
+
+### 表：统一返回Json格式
+
+字段	类型	描述
+status	string	"success" or "error"
+data	dict/null	成功时返回的结果数据
+error	string/null	错误时的消息文字
+code	int	HTTP 状态码（用于前端逻辑处理）
+
+成功返回：
+
+```
+{
+  "status": "success",
+  "code": 201,
+  "data": {
+    "file_id": "abc123",
+    "name": "谱子.pdf",
+    "uploaded_at": "2025-03-28T20:12:35Z"
+  },
+  "error": null
+}
+```
+错误返回：
+
+```
+{
+  "status": "error",
+  "code": 400,
+  "data": null,
+  "error": "缺少文件"
+}
 
 ```
