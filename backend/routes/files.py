@@ -101,20 +101,43 @@ def upload_file():
 
     uploaded_at = today.isoformat()
 
-    with get_db() as (conn, cursor):
-        cursor.execute("""
-            INSERT INTO files (id, name, upload_path, size, uploaded_at)
-            VALUES (?, ?, ?, ?, ?)
-        """, (
-            file_id,
-            original_name,
-            save_path,
-            os.path.getsize(save_path),
-            uploaded_at
-        ))
+    # with get_db() as (conn, cursor):
+    #     cursor.execute("""
+    #         INSERT INTO files (id, name, upload_path, size, uploaded_at)
+    #         VALUES (?, ?, ?, ?, ?)
+    #     """, (
+    #         file_id,
+    #         original_name,
+    #         save_path,
+    #         os.path.getsize(save_path),
+    #         uploaded_at
+    #     ))
 
-    return success({
-        "file_id": file_id,
-        "name": original_name,
-        "uploaded_at": uploaded_at
-    }, code=201)
+    # return success({
+    #     "file_id": file_id,
+    #     "name": original_name,
+    #     "uploaded_at": uploaded_at
+    # }, code=201)
+    try:
+        with get_db() as (conn, cursor):
+            cursor.execute("""
+                INSERT INTO files (id, name, upload_path, size, uploaded_at)
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                file_id,
+                original_name,
+                save_path,
+                os.path.getsize(save_path),
+                uploaded_at
+            ))
+        return success({
+            "file_id": file_id,
+            "name": original_name,
+            "uploaded_at": uploaded_at
+        }, code=201)
+    
+    except Exception as e:
+        # 删除刚保存的文件
+        if os.path.exists(save_path):
+            os.remove(save_path)
+        return error(f"数据库写入失败，文件已删除：{str(e)}", 500)
