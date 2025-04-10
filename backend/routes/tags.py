@@ -256,3 +256,61 @@ def add_alias(tag_id):
         "tag_id": tag_id,
         "alias": alias
     }, code=201)
+
+
+@tags_bp.route("/<int:tag_id>", methods=["DELETE"])
+def delete_tag(tag_id):
+    """
+    删除主标签（及其所有别名）
+    ---
+    tags:
+      - 标签
+    parameters:
+      - name: tag_id
+        in: path
+        type: integer
+        required: true
+        description: 要删除的标签 ID
+    responses:
+      200:
+        description: 删除成功
+    """
+    with get_db() as (conn, cursor):
+        cursor.execute("SELECT * FROM tags WHERE id = ?", (tag_id,))
+        tag = cursor.fetchone()
+        if not tag:
+            return error("标签不存在", 404)
+
+        # 删除主标签（别名表设置外键自动删除 或手动删除都可）
+        cursor.execute("DELETE FROM tags WHERE id = ?", (tag_id,))
+        cursor.execute("DELETE FROM tag_aliases WHERE tag_id = ?", (tag_id,))
+
+    return success({"deleted_tag_id": tag_id}, 200)
+
+@tags_bp.route("/alias/<int:alias_id>", methods=["DELETE"])
+def delete_alias(alias_id):
+    """
+    删除标签别名
+    ---
+    tags:
+      - 标签
+    parameters:
+      - name: alias_id
+        in: path
+        type: integer
+        required: true
+        description: 要删除的别名 ID
+    responses:
+      200:
+        description: 删除成功
+    """
+    with get_db() as (conn, cursor):
+        cursor.execute("SELECT * FROM tag_aliases WHERE id = ?", (alias_id,))
+        alias = cursor.fetchone()
+        if not alias:
+            return error("别名不存在", 404)
+
+        cursor.execute("DELETE FROM tag_aliases WHERE id = ?", (alias_id,))
+
+    return success({"deleted_alias_id": alias_id}, 200)
+
