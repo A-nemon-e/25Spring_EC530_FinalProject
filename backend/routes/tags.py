@@ -59,16 +59,28 @@ def create_tag():
 
     try:
         with get_db() as (conn, cursor):
-            cursor.execute("SELECT id FROM tags WHERE name = ? AND category = ?", (name.strip(), category.strip()))
+            name_clean = name.strip()
+            category_clean = category.strip()
+
+            # 1. 检查是否已经是主标签
+            cursor.execute("SELECT id FROM tags WHERE name = ? AND category = ?", (name_clean, category_clean))
             existing = cursor.fetchone()
             if existing:
                 return error("标签已存在", 409)
 
+            # 2. 检查是否与任意 alias 冲突（任何标签下）
+            cursor.execute("SELECT id FROM tag_aliases WHERE alias = ?", (name_clean,))
+            alias_conflict = cursor.fetchone()
+            if alias_conflict:
+                return error("该标签名已作为别名存在", 409)
+
+            # 3. 插入
             cursor.execute(
                 "INSERT INTO tags (name, category) VALUES (?, ?)",
-                (name.strip(), category.strip())
+                (name_clean, category_clean)
             )
             tag_id = cursor.lastrowid
+
     except Exception as e:
         return error(f"数据库写入失败：{str(e)}", 500)
 
@@ -175,3 +187,72 @@ def get_tags():
                     "aliases": aliases
                 })
             return success(result)
+
+@tags_bp.route("/<int:tag_id>/alias", methods=["POST"])
+def add_alias(tag_id):
+    """
+    给指定标签添加别名
+    ---
+    tags:
+      - 标签
+    parameters:
+      - name: tag_id
+        in: path
+        type: integer
+        required: true
+        description: 标签 ID
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            alias:
+              type: string
+              example: 老肖
+    responses:
+      201:
+        description: 添加成功
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: success
+            code:
+              type: integer
+              example: 201
+            data:
+              type: object
+              properties:
+                tag_id:
+                  type: integer
+                alias:
+                  type: string
+    """
+    data = request.get_json()
+    alias = data.get("alias", "").strip()
+
+    if not alias:
+        return error("alias 是必填字段", 400)
+
+    with get_db() as (conn, cursor):
+        # 检查标签是否存在
+        cursor.execute("SELECT * FROM tags WHERE id = ?", (tag_id,))
+        tag = cursor.fetchone()
+        if not tag:
+            return error("指定的标签不存在", 404)
+
+        # 检查是否已存在此 alias（任何标签下）
+        cursor.execute("SELECT * FROM tag_aliases WHERE alias = ?", (alias,))
+        existing = cursor.fetchone()
+        if existing:
+            return error("该别名已被占用", 409)
+
+        # 插入别名
+        cursor.execute("INSERT INTO tag_aliases (tag_id, alias) VALUES (?, ?)", (tag_id, alias))
+
+    return success({
+        "tag_id": tag_id,
+        "alias": alias
+    }, code=201)
