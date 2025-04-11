@@ -143,8 +143,11 @@ def get_tags():
                 # 找到主标签，查出所有别名
                 result = []
                 for tag in tags:
-                    cursor.execute("SELECT alias FROM tag_aliases WHERE tag_id = ?", (tag["id"],))
-                    aliases = [row["alias"] for row in cursor.fetchall()]
+                    # cursor.execute("SELECT alias FROM tag_aliases WHERE tag_id = ?", (tag["id"],))
+                    # aliases = [row["alias"] for row in cursor.fetchall()]
+                    cursor.execute("SELECT id, alias FROM tag_aliases WHERE tag_id = ?", (tag["id"],))
+                    aliases = [{"id": row["id"], "name": row["alias"]} for row in cursor.fetchall()]
+
                     result.append({
                         "id": tag["id"],
                         "name": tag["name"],
