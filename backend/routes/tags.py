@@ -163,8 +163,10 @@ def get_tags():
                 tag_id = alias_row["tag_id"]
                 cursor.execute("SELECT * FROM tags WHERE id = ?", (tag_id,))
                 tag = cursor.fetchone()
-                cursor.execute("SELECT alias FROM tag_aliases WHERE tag_id = ?", (tag_id,))
-                aliases = [row["alias"] for row in cursor.fetchall()]
+                # cursor.execute("SELECT alias FROM tag_aliases WHERE tag_id = ?", (tag_id,))
+                # aliases = [row["alias"] for row in cursor.fetchall()]
+                cursor.execute("SELECT id, alias FROM tag_aliases WHERE tag_id = ?", (tag["id"],))
+                aliases = [{"id": row["id"], "name": row["alias"]} for row in cursor.fetchall()]
                 return success([{
                     "id": tag["id"],
                     "name": tag["name"],
@@ -181,8 +183,11 @@ def get_tags():
             tags = cursor.fetchall()
             result = []
             for tag in tags:
-                cursor.execute("SELECT alias FROM tag_aliases WHERE tag_id = ?", (tag["id"],))
-                aliases = [row["alias"] for row in cursor.fetchall()]
+                # cursor.execute("SELECT alias FROM tag_aliases WHERE tag_id = ?", (tag["id"],))
+                # aliases = [row["alias"] for row in cursor.fetchall()]
+                cursor.execute("SELECT id, alias FROM tag_aliases WHERE tag_id = ?", (tag["id"],))
+                aliases = [{"id": row["id"], "name": row["alias"]} for row in cursor.fetchall()]
+                
                 result.append({
                     "id": tag["id"],
                     "name": tag["name"],
