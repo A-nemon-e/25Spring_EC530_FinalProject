@@ -122,3 +122,118 @@ def upload_file():
 
 
 
+@files_bp.route("/<file_id>", methods=["GET"])
+def get_file(file_id):
+    """
+    获取单个文件详情
+    ---
+    tags:
+      - 文件
+    parameters:
+      - name: file_id
+        in: path
+        type: string
+        required: true
+        description: 文件 ID
+    responses:
+      200:
+        description: 成功返回文件详情
+    """
+    with get_db() as (conn, cursor):
+        # 查询文件主信息
+        cursor.execute("SELECT * FROM files WHERE id = ?", (file_id,))
+        file = cursor.fetchone()
+        if not file:
+            return error("文件不存在", 404)
+
+        # 查询标签信息
+        cursor.execute("""
+            SELECT t.id, t.name, t.category
+            FROM file_tags ft
+            JOIN tags t ON ft.tag_id = t.id
+            WHERE ft.file_id = ?
+        """, (file_id,))
+        tags = [dict(row) for row in cursor.fetchall()]
+
+        # 查询文件夹信息
+        cursor.execute("""
+            SELECT f.id, f.name, f.parent_id
+            FROM file_folders ff
+            JOIN folders f ON ff.folder_id = f.id
+            WHERE ff.file_id = ?
+        """, (file_id,))
+        folders = [dict(row) for row in cursor.fetchall()]
+
+        return success({
+            "id": file["id"],
+            "name": file["name"],
+            "size": file["size"],
+            "upload_path": file["upload_path"],
+            "uploaded_at": file["uploaded_at"],
+            "tags": tags,
+            "folders": folders
+        })
+
+@files_bp.route("/<file_id>", methods=["PUT"])
+def update_file_relations(file_id):
+    """
+    修改文件的标签和文件夹绑定（传空视为清空，必须显式提供不修改部分）
+    ---
+    tags:
+      - 文件
+    parameters:
+      - name: file_id
+        in: path
+        type: string
+        required: true
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            tags:
+              type: array
+              items: { type: string }
+            folders:
+              type: array
+              items: { type: string }
+    responses:
+      200:
+        description: 修改成功
+    """
+    data = request.get_json()
+    tags = data.get("tags")
+    folders = data.get("folders")
+
+    if tags is None or folders is None:
+        return error("tags 和 folders 都必须提供（可为空数组）", 400)
+
+    if not isinstance(tags, list) or not isinstance(folders, list):
+        return error("tags 和 folders 必须是数组", 400)
+
+    with get_db() as (conn, cursor):
+        # 检查文件是否存在
+        cursor.execute("SELECT id FROM files WHERE id = ?", (file_id,))
+        if not cursor.fetchone():
+            return error("文件不存在", 404)
+
+        # 清除旧绑定
+        cursor.execute("DELETE FROM file_tags WHERE file_id = ?", (file_id,))
+        cursor.execute("DELETE FROM file_folders WHERE file_id = ?", (file_id,))
+
+        # 插入新的标签
+        for tag_id in tags:
+            cursor.execute("SELECT id FROM tags WHERE id = ?", (tag_id,))
+            if not cursor.fetchone():
+                return error(f"标签不存在：{tag_id}", 400)
+            cursor.execute("INSERT INTO file_tags (file_id, tag_id) VALUES (?, ?)", (file_id, tag_id))
+
+        # 插入新的文件夹
+        for folder_id in folders:
+            cursor.execute("SELECT id FROM folders WHERE id = ?", (folder_id,))
+            if not cursor.fetchone():
+                return error(f"文件夹不存在：{folder_id}", 400)
+            cursor.execute("INSERT INTO file_folders (file_id, folder_id) VALUES (?, ?)", (file_id, folder_id))
+
+    return success({"file_id": file_id}, 200)
