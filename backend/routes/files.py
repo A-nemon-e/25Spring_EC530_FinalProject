@@ -241,85 +241,69 @@ def update_file_relations(file_id):
 @files_bp.route("", methods=["GET"])
 def list_files():
     """
-    分页获取文件（支持按标签 ID 和文件夹 ID 筛选，返回文件夹完整路径）
-    ---
-    tags:
-      - 文件
-    parameters:
-      - name: folder_id
-        in: query
-        type: string
-        required: false
-      - name: tag_id
-        in: query
-        type: string
-        required: false
-      - name: page
-        in: query
-        type: integer
-        required: false
-      - name: size
-        in: query
-        type: integer
-        required: false
-    responses:
-      200:
-        description: 文件分页结果，包含标签与文件夹完整路径
+    分页获取文件（支持按多个标签 ID 交集和文件夹 ID 筛选，返回完整路径）
     """
     folder_id = request.args.get("folder_id")
-    tag_id = request.args.get("tag_id")
+    tag_ids_str = request.args.get("tag_ids")  # 示例: tag1,tag2
     page = int(request.args.get("page", 1))
     size = int(request.args.get("size", 20))
-
-    if not folder_id and not tag_id:
-        return error("必须提供 folder_id 或 tag_id 至少一个筛选条件", 400)
-
     offset = (page - 1) * size
 
+    tag_ids = tag_ids_str.split(",") if tag_ids_str else []
+
+    if not folder_id and not tag_ids:
+        return error("必须提供 tag_ids 或 folder_id 至少一个", 400)
+
     with get_db() as (conn, cursor):
-        # 构建 JOIN 和 WHERE 子句
-        joins = []
+        # 1. tag_ids 子查询
+        file_ids = None
+        if tag_ids:
+            tag_placeholders = ','.join(['?'] * len(tag_ids))
+            tag_sql = f"""
+                SELECT file_id FROM file_tags
+                WHERE tag_id IN ({tag_placeholders})
+                GROUP BY file_id
+                HAVING COUNT(DISTINCT tag_id) = ?
+            """
+            cursor.execute(tag_sql, tag_ids + [len(tag_ids)])
+            file_ids = [row["file_id"] for row in cursor.fetchall()]
+            if not file_ids:
+                return success({"total": 0, "files": []})  # 无匹配结果
+
+        # 2. 构建主查询
         where_clauses = []
         params = []
 
+        if file_ids is not None:
+            placeholders = ','.join(['?'] * len(file_ids))
+            where_clauses.append(f"f.id IN ({placeholders})")
+            params.extend(file_ids)
+
         if folder_id:
-            joins.append("JOIN file_folders ff ON f.id = ff.file_id")
-            where_clauses.append("ff.folder_id = ?")
+            where_clauses.append("EXISTS (SELECT 1 FROM file_folders ff WHERE ff.file_id = f.id AND ff.folder_id = ?)")
             params.append(folder_id)
 
-        if tag_id:
-            joins.append("JOIN file_tags ft ON f.id = ft.file_id")
-            where_clauses.append("ft.tag_id = ?")
-            params.append(tag_id)
+        where_sql = "WHERE " + " AND ".join(where_clauses)
 
-        join_sql = " " + " ".join(joins)
-        where_sql = " WHERE " + " AND ".join(where_clauses)
-
-        # 分页主查询
-        list_query = f"""
-            SELECT f.* FROM files f
-            {join_sql}
+        # 3. 查询文件记录
+        cursor.execute(f"""
+            SELECT * FROM files f
             {where_sql}
             ORDER BY f.uploaded_at DESC
             LIMIT ? OFFSET ?
-        """
-        params_with_pagination = params + [size, offset]
-        cursor.execute(list_query, params_with_pagination)
+        """, params + [size, offset])
         files = cursor.fetchall()
 
-        # 查询总数
-        count_query = f"""
-            SELECT COUNT(DISTINCT f.id) FROM files f
-            {join_sql}
+        # 4. 查询总数
+        cursor.execute(f"""
+            SELECT COUNT(*) FROM files f
             {where_sql}
-        """
-        cursor.execute(count_query, params)
+        """, params)
         total = cursor.fetchone()[0]
 
-        # 预加载所有文件夹用于路径构建
+        # 5. 加载所有文件夹构建路径
         cursor.execute("SELECT id, name, parent_id FROM folders")
-        all_folders = cursor.fetchall()
-        folder_dict = {f["id"]: dict(f) for f in all_folders}
+        folder_dict = {f["id"]: dict(f) for f in cursor.fetchall()}
 
         def build_full_path(folder_id):
             path = []
@@ -329,7 +313,6 @@ def list_files():
                 folder_id = folder["parent_id"]
             return path
 
-        # 构建文件列表结果
         result = []
         for f in files:
             file_id = f["id"]
@@ -342,7 +325,7 @@ def list_files():
             """, (file_id,))
             tags = [dict(row) for row in cursor.fetchall()]
 
-            # 查文件夹 + 构造 full_path
+            # 查文件夹并附加完整路径
             cursor.execute("""
                 SELECT fo.id, fo.name, fo.parent_id
                 FROM file_folders ff JOIN folders fo ON ff.folder_id = fo.id
@@ -370,7 +353,6 @@ def list_files():
         "total": total,
         "files": result
     })
-
 
 @files_bp.route("/<file_id>", methods=["DELETE"])
 def delete_file(file_id):
