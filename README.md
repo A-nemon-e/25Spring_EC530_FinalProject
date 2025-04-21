@@ -65,10 +65,11 @@ GPT proposed project structure:(SQLite)
 ### 路由
 ```
 功能类型	路径	方法	描述
-上传文件	/api/files/upload	POST	上传文件并指定所属文件夹和标签
-文件列表	/api/files	GET	分页获取所有文件
+上传文件	/api/files/upload	POST	上传文件并指定所属文件夹和标签（可选）
 文件详情	/api/files/<file_id>	GET	获取单个文件信息
 删除文件	/api/files/<file_id>	DELETE	删除文件及关联
+修改信息  /api/files/{file_id}  PUT 修改文件的标签和文件夹绑定（传空视为清空，必须显式提供不修改部分）
+搜索文件  /api/files  GET 分页获取文件（支持按标签 ID 和文件夹 ID 筛选，返回文件夹完整路径，文件id，tag）
 
 功能类型	路径	方法	描述
 获取文件夹	/api/folders/tree	GET	获取所有文件夹层级结构
@@ -81,8 +82,7 @@ GPT proposed project structure:(SQLite)
 添加别名	/api/tags/<tag_id>/alias	POST	给指定标签添加一个别名
 
 功能类型	路径	方法	描述
-搜索文件	/api/search?q=xxx	GET	输入 tag 名或 alias，查文件
-多条件搜索	/api/search?q=xxx&folder=...&tag=...	GET	组合搜索
+
 
 ```
 

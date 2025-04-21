@@ -237,3 +237,180 @@ def update_file_relations(file_id):
             cursor.execute("INSERT INTO file_folders (file_id, folder_id) VALUES (?, ?)", (file_id, folder_id))
 
     return success({"file_id": file_id}, 200)
+
+@files_bp.route("", methods=["GET"])
+def list_files():
+    """
+    分页获取文件（支持按标签 ID 和文件夹 ID 筛选，返回文件夹完整路径）
+    ---
+    tags:
+      - 文件
+    parameters:
+      - name: folder_id
+        in: query
+        type: string
+        required: false
+      - name: tag_id
+        in: query
+        type: string
+        required: false
+      - name: page
+        in: query
+        type: integer
+        required: false
+      - name: size
+        in: query
+        type: integer
+        required: false
+    responses:
+      200:
+        description: 文件分页结果，包含标签与文件夹完整路径
+    """
+    folder_id = request.args.get("folder_id")
+    tag_id = request.args.get("tag_id")
+    page = int(request.args.get("page", 1))
+    size = int(request.args.get("size", 20))
+
+    if not folder_id and not tag_id:
+        return error("必须提供 folder_id 或 tag_id 至少一个筛选条件", 400)
+
+    offset = (page - 1) * size
+
+    with get_db() as (conn, cursor):
+        # 构建 JOIN 和 WHERE 子句
+        joins = []
+        where_clauses = []
+        params = []
+
+        if folder_id:
+            joins.append("JOIN file_folders ff ON f.id = ff.file_id")
+            where_clauses.append("ff.folder_id = ?")
+            params.append(folder_id)
+
+        if tag_id:
+            joins.append("JOIN file_tags ft ON f.id = ft.file_id")
+            where_clauses.append("ft.tag_id = ?")
+            params.append(tag_id)
+
+        join_sql = " " + " ".join(joins)
+        where_sql = " WHERE " + " AND ".join(where_clauses)
+
+        # 分页主查询
+        list_query = f"""
+            SELECT f.* FROM files f
+            {join_sql}
+            {where_sql}
+            ORDER BY f.uploaded_at DESC
+            LIMIT ? OFFSET ?
+        """
+        params_with_pagination = params + [size, offset]
+        cursor.execute(list_query, params_with_pagination)
+        files = cursor.fetchall()
+
+        # 查询总数
+        count_query = f"""
+            SELECT COUNT(DISTINCT f.id) FROM files f
+            {join_sql}
+            {where_sql}
+        """
+        cursor.execute(count_query, params)
+        total = cursor.fetchone()[0]
+
+        # 预加载所有文件夹用于路径构建
+        cursor.execute("SELECT id, name, parent_id FROM folders")
+        all_folders = cursor.fetchall()
+        folder_dict = {f["id"]: dict(f) for f in all_folders}
+
+        def build_full_path(folder_id):
+            path = []
+            while folder_id and folder_id in folder_dict:
+                folder = folder_dict[folder_id]
+                path.insert(0, folder["name"])
+                folder_id = folder["parent_id"]
+            return path
+
+        # 构建文件列表结果
+        result = []
+        for f in files:
+            file_id = f["id"]
+
+            # 查标签
+            cursor.execute("""
+                SELECT t.id, t.name, t.category
+                FROM file_tags ft JOIN tags t ON ft.tag_id = t.id
+                WHERE ft.file_id = ?
+            """, (file_id,))
+            tags = [dict(row) for row in cursor.fetchall()]
+
+            # 查文件夹 + 构造 full_path
+            cursor.execute("""
+                SELECT fo.id, fo.name, fo.parent_id
+                FROM file_folders ff JOIN folders fo ON ff.folder_id = fo.id
+                WHERE ff.file_id = ?
+            """, (file_id,))
+            raw_folders = cursor.fetchall()
+
+            folders = []
+            for row in raw_folders:
+                folder = dict(row)
+                folder["full_path"] = build_full_path(folder["id"])
+                folders.append(folder)
+
+            result.append({
+                "id": file_id,
+                "name": f["name"],
+                "size": f["size"],
+                "upload_path": f["upload_path"],
+                "uploaded_at": f["uploaded_at"],
+                "tags": tags,
+                "folders": folders
+            })
+
+    return success({
+        "total": total,
+        "files": result
+    })
+
+
+@files_bp.route("/<file_id>", methods=["DELETE"])
+def delete_file(file_id):
+    """
+    删除文件及其所有关联
+    ---
+    tags:
+      - 文件
+    parameters:
+      - name: file_id
+        in: path
+        type: string
+        required: true
+        description: 要删除的文件 ID
+    responses:
+      200:
+        description: 删除成功
+    """
+    with get_db() as (conn, cursor):
+        # 1. 查找文件是否存在
+        cursor.execute("SELECT * FROM files WHERE id = ?", (file_id,))
+        file = cursor.fetchone()
+        if not file:
+            return error("文件不存在", 404)
+
+        upload_path = file["upload_path"]
+
+        # 2. 删除本地文件
+        if upload_path and os.path.exists(upload_path):
+            try:
+                os.remove(upload_path)
+            except Exception as e:
+                return error(f"本地文件删除失败：{str(e)}", 500)
+
+        # 3. 删除中间表中的所有绑定
+        cursor.execute("DELETE FROM file_tags WHERE file_id = ?", (file_id,))
+        cursor.execute("DELETE FROM file_folders WHERE file_id = ?", (file_id,))
+
+        # 4. 删除文件主记录
+        cursor.execute("DELETE FROM files WHERE id = ?", (file_id,))
+
+    return success({"deleted_file_id": file_id}, 200)
+
