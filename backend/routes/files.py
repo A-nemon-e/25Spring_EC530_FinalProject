@@ -241,7 +241,95 @@ def update_file_relations(file_id):
 @files_bp.route("", methods=["GET"])
 def list_files():
     """
-    分页获取文件（支持按多个标签 ID 交集和文件夹 ID 筛选，返回完整路径）
+    分页获取文件（支持多个标签 ID 交集和文件夹 ID，返回完整路径）
+    ---
+    tags:
+      - 文件
+    parameters:
+      - name: tag_ids
+        in: query
+        type: string
+        required: false
+        description: 多个 tag_id，逗号分隔（表示交集筛选，例如 tag1,tag2 表示必须同时具备这两个标签）
+      - name: folder_id
+        in: query
+        type: string
+        required: false
+        description: 文件夹 ID（仅返回属于该文件夹的文件）
+      - name: page
+        in: query
+        type: integer
+        required: false
+        default: 1
+        description: 页码，从 1 开始
+      - name: size
+        in: query
+        type: integer
+        required: false
+        default: 20
+        description: 每页条数
+    responses:
+      200:
+        description: 成功返回文件分页列表
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: success
+            code:
+              type: integer
+              example: 200
+            data:
+              type: object
+              properties:
+                total:
+                  type: integer
+                  example: 32
+                files:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      size:
+                        type: integer
+                      upload_path:
+                        type: string
+                      uploaded_at:
+                        type: string
+                      tags:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            category:
+                              type: string
+                      folders:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            parent_id:
+                              type: string
+                            full_path:
+                              type: array
+                              items:
+                                type: string
+            error:
+              type: string
+              example: null
     """
     folder_id = request.args.get("folder_id")
     tag_ids_str = request.args.get("tag_ids")  # 示例: tag1,tag2
@@ -353,6 +441,7 @@ def list_files():
         "total": total,
         "files": result
     })
+
 
 @files_bp.route("/<file_id>", methods=["DELETE"])
 def delete_file(file_id):
