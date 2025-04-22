@@ -1,4 +1,4 @@
-<script setup>
+<!-- <script setup>
 import HelloWorld from './components/HelloWorld.vue'
 </script>
 
@@ -12,7 +12,15 @@ import HelloWorld from './components/HelloWorld.vue'
     </a>
   </div>
   <HelloWorld msg="Vite + Vue" />
+</template> -->
+
+<template>
+  <Search />
 </template>
+
+<script setup>
+import Search from './views/Search.vue'
+</script>
 
 <style scoped>
 .logo {
