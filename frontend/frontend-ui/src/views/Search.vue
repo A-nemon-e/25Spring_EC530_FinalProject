@@ -18,10 +18,11 @@
           closable
           @close="removeItem(item)"
           type="primary"
+          style="font-size: 15px; padding: 15px 8px;"
         >
           {{ item.name }}
         </el-tag>
-        <el-button type="success" @click="searchFiles" size="small">
+        <el-button type="success" @click="searchFiles" style="font-size: 14px; padding: 1px 8px;">
           搜索文件（共 {{ selectedItems.length }} 项）
         </el-button>
       </el-space>
@@ -144,12 +145,21 @@
 
       <!-- 标签展示 -->
       <div style="margin-top: 8px;">
-        <el-tag
+        <!-- <el-tag
           v-for="tag in getOtherTags(file)"
           :key="tag.id"
           type="info"
           size="small"
           style="margin-right: 6px;"
+        >
+          {{ tag.name }}（{{ tag.category }}）
+        </el-tag> -->
+        <el-tag
+          v-for="tag in getOtherTags(file)"
+          :key="tag.id"
+          :color="getCategoryColor(tag.category)"
+          size="small"
+          style="margin-right: 6px; color: white;"
         >
           {{ tag.name }}（{{ tag.category }}）
         </el-tag>
@@ -186,6 +196,33 @@
   import { useRouter } from 'vue-router'
   import { Folder } from '@element-plus/icons-vue'
   import { nextTick } from 'vue'
+
+  // ✅ 分类 → 颜色 映射
+  const categoryColorMap = ref({})
+
+  // ✅ 可用颜色池（自动循环分配）
+  const availableColors = [
+    '#409EFFe0', // 蓝
+    '#67C23Ae0', // 绿
+    '#E6A23Ce0', // 橙
+    '#F56C6Ce0', // 红
+    '#909399e0', // 灰
+    '#8E44ADe0', // 紫
+    '#1abc9ce0', // 青
+    '#E84393e0'  // 粉
+  ]
+
+  let colorIndex = 0
+
+  //   ✅ 获取分类对应颜色
+  const getCategoryColor = (category) => {
+    if (!categoryColorMap.value[category]) {
+      const color = availableColors[colorIndex % availableColors.length]
+      categoryColorMap.value[category] = color
+      colorIndex++
+    }
+    return categoryColorMap.value[category]
+  }
 
   
   const fileList = ref([])
