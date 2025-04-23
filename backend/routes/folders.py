@@ -139,3 +139,55 @@ def delete_folder(folder_id):
     return success({
         "deleted_folder_ids": all_ids
     }, 200)
+
+
+
+@folders_bp.route("/search", methods=["GET"])
+def search_folders():
+    """
+    搜索文件夹（模糊匹配名称，返回完整路径）
+    ---
+    tags:
+      - 文件夹
+    parameters:
+      - name: q
+        in: query
+        type: string
+        required: true
+        description: 文件夹关键词
+    responses:
+      200:
+        description: 匹配到的文件夹及其完整路径
+    """
+    q = request.args.get("q", "").strip()
+
+    if not q:
+        return error("必须提供搜索关键词", 400)
+
+    with get_db() as (conn, cursor):
+        cursor.execute("SELECT * FROM folders")
+        all_folders = cursor.fetchall()
+        folder_dict = {f["id"]: dict(f) for f in all_folders}
+
+        def build_full_path(folder_id):
+            path = []
+            while folder_id and folder_id in folder_dict:
+                f = folder_dict[folder_id]
+                path.insert(0, f["name"])
+                folder_id = f["parent_id"]
+            return path
+
+        # 查匹配项
+        cursor.execute("SELECT * FROM folders WHERE name LIKE ?", (f"%{q}%",))
+        matches = cursor.fetchall()
+
+        result = []
+        for folder in matches:
+            result.append({
+                "id": folder["id"],
+                "name": folder["name"],
+                "parent_id": folder["parent_id"],
+                "full_path": build_full_path(folder["id"])
+            })
+
+        return success(result)
