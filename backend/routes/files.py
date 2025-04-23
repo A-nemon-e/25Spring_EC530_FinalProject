@@ -337,7 +337,7 @@ def list_files():
 
     tag_ids_str = request.args.get("tag_ids")  # 示例: tag1,tag2
     page = int(request.args.get("page", 1))
-    size = int(request.args.get("size", 20))
+    size = int(request.args.get("size", 2000000))
     offset = (page - 1) * size
 
     tag_ids = tag_ids_str.split(",") if tag_ids_str else []
