@@ -107,39 +107,63 @@
   </el-divider>
 
   <el-card
-    v-for="file in fileResults"
-    :key="file.id"
-    style="margin-bottom: 14px"
-    shadow="hover"
-  >
-    <div style="display: flex; justify-content: space-between;">
-      <div>
-        <div><strong>{{ file.name }}</strong></div>
-        <div style="font-size: 12px; color: gray;">大小：{{ file.size }} 字节</div>
-        <div style="font-size: 12px;">上传路径：{{ file.upload_path }}</div>
-        <div style="font-size: 12px;">上传时间：{{ file.uploaded_at }}</div>
+  v-for="file in fileResults"
+  :key="file.id"
+  style="margin-bottom: 14px"
+  shadow="hover"
+>
+  <div style="display: flex; justify-content: space-between;">
+    <div>
+      <!-- 主标题：title 标签或 fallback -->
+      <div style="font-weight: bold; font-size: 16px;">
+        {{ getFileTitle(file) }}
+      </div>
 
-        <div style="margin-top: 8px;">
-          <el-tag
-            v-for="tag in file.tags"
-            :key="tag.id"
-            type="info"
-            size="small"
-            style="margin-right: 6px;"
-          >
-            {{ tag.name }}（{{ tag.category }}）
-          </el-tag>
-        </div>
+      <!-- title 标签别名（如有） -->
+      <div v-if="getTitleAliases(file).length > 0" style="font-size: 12px; color: gray;">
+        别名：{{ getTitleAliases(file).join(' / ') }}
+      </div>
 
-        <div style="margin-top: 6px; font-size: 12px; color: gray;">
-          所属路径：
-          <span v-for="folder in file.folders" :key="folder.id" style="margin-right: 12px;">
-            {{ folder.full_path.join(" / ") }}
-          </span>
-        </div>
+      <!-- 上传时间 --> 
+      <div style="font-size: 12px; color: gray; margin-top: 4px;">
+        上传时间：{{ formatDate(file.uploaded_at) }}
+      </div>
+
+      <!-- 所属文件夹路径 -->
+      <div v-if="file.folders.length > 0" style="margin-top: 6px; font-size: 12px;">
+        所属路径：
+        <span
+          v-for="folder in file.folders"
+          :key="folder.id"
+          @click="goToFolder(folder.id)"
+          style="margin-right: 12px; color: #409EFF; cursor: pointer; text-decoration: underline;"
+        >
+          {{ folder.full_path.join(" / ") }}
+        </span>
+      </div>
+
+      <!-- 标签展示 -->
+      <div style="margin-top: 8px;">
+        <el-tag
+          v-for="tag in getOtherTags(file)"
+          :key="tag.id"
+          type="info"
+          size="small"
+          style="margin-right: 6px;"
+        >
+          {{ tag.name }}（{{ tag.category }}）
+        </el-tag>
       </div>
     </div>
-  </el-card>
+
+    <!-- 操作按钮 -->
+    <div style="text-align: right;">
+      <el-button size="small" type="primary">下载</el-button>
+      <el-button size="small">详情</el-button>
+    </div>
+  </div>
+</el-card>
+
 
   <div style="text-align: center; margin-top: 20px;">
     <el-pagination
@@ -181,7 +205,7 @@
   const folders = ref([])
   const selectedItems = ref([]) // 统一管理已选项（标签/文件夹）
   
-  const router = useRouter()
+  // const router = useRouter()
   
   // 标签按类别分组
   const groupedTags = computed(() => {
@@ -312,6 +336,38 @@ const searchFiles = () => {
 const handlePageChange = (newPage) => {
   currentPage.value = newPage
   fetchFiles()
+}
+
+
+// import { useRouter } from 'vue-router'
+const router = useRouter()
+
+// 获取主标题（title 标签或文件名）
+const getFileTitle = (file) => {
+  const titleTag = file.tags.find(t => t.category === 'title')
+  return titleTag ? titleTag.name : file.name
+}
+
+// 获取 title 标签别名（你需要在后端把 aliases 一并传回来）
+const getTitleAliases = (file) => {
+  const titleTag = file.tags.find(t => t.category === 'title')
+  return titleTag && titleTag.aliases ? titleTag.aliases.map(a => a.name) : []
+}
+
+// 过滤掉 title 之外的标签
+const getOtherTags = (file) => {
+  return file.tags.filter(t => t.category !== 'title')
+}
+
+// 时间格式化为本地时区
+const formatDate = (ts) => {
+  const dt = new Date(ts)
+  return dt.toLocaleString()
+}
+
+// 跳转文件夹页面
+const goToFolder = (folderId) => {
+  router.push(`/folder/${folderId}`)
 }
 
 
