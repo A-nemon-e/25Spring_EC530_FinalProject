@@ -100,7 +100,60 @@
           </div>
         </el-card>
       </div>
+      <!-- 文件搜索结果 -->
+<div v-if="fileResults.length > 0" style="margin-top: 40px">
+  <el-divider content-position="left">
+    <span class="category-divider-text">文件搜索结果</span>
+  </el-divider>
+
+  <el-card
+    v-for="file in fileResults"
+    :key="file.id"
+    style="margin-bottom: 14px"
+    shadow="hover"
+  >
+    <div style="display: flex; justify-content: space-between;">
+      <div>
+        <div><strong>{{ file.name }}</strong></div>
+        <div style="font-size: 12px; color: gray;">大小：{{ file.size }} 字节</div>
+        <div style="font-size: 12px;">上传路径：{{ file.upload_path }}</div>
+        <div style="font-size: 12px;">上传时间：{{ file.uploaded_at }}</div>
+
+        <div style="margin-top: 8px;">
+          <el-tag
+            v-for="tag in file.tags"
+            :key="tag.id"
+            type="info"
+            size="small"
+            style="margin-right: 6px;"
+          >
+            {{ tag.name }}（{{ tag.category }}）
+          </el-tag>
+        </div>
+
+        <div style="margin-top: 6px; font-size: 12px; color: gray;">
+          所属路径：
+          <span v-for="folder in file.folders" :key="folder.id" style="margin-right: 12px;">
+            {{ folder.full_path.join(" / ") }}
+          </span>
+        </div>
+      </div>
     </div>
+  </el-card>
+
+  <div style="text-align: center; margin-top: 20px;">
+    <el-pagination
+      background
+      layout="prev, pager, next"
+      :total="fileTotal"
+      :page-size="pageSize"
+      :current-page="currentPage"
+      @current-change="handlePageChange"
+    />
+  </div>
+</div>
+    </div>
+    
   </template>
   
   <script setup>
@@ -109,6 +162,19 @@
   import { useRouter } from 'vue-router'
   import { Folder } from '@element-plus/icons-vue'
   
+  const fileList = ref([])
+  const fileTotal = ref(0)
+  const page = ref(1)
+  const pageSize = ref(20)
+  const fileResults = ref([])
+//   const fileResults = ref([])
+//   const fileTotal = ref(0)
+  const currentPage = ref(1)
+//   const pageSize = ref(20)
+
+
+
+
   const keyword = ref('')
   const mode = ref('tag')
   const tags = ref([])
@@ -178,9 +244,9 @@
   const openFolder = (folderId) => {
     router.push(`/folder/${folderId}`)
   }
-  
-  // 搜索文件：统一构造 tag_ids
-  const searchFiles = () => {
+
+  // d实际查询函数
+  const fetchFiles = async () => {
   const tagIds = selectedItems.value
     .filter(item => item.type === 'tag')
     .map(item => item.id)
@@ -189,16 +255,66 @@
     .filter(item => item.type === 'folder')
     .map(item => item.id)
 
-  // 构造查询参数
   const queryParams = new URLSearchParams()
   if (tagIds.length > 0) queryParams.append("tag_ids", tagIds.join(","))
   if (folderIds.length > 0) queryParams.append("folder_ids", folderIds.join(","))
+  queryParams.append("page", currentPage.value)
+  queryParams.append("size", pageSize.value)
 
-  const url = `/api/files?${queryParams.toString()}`
-  alert(`调用接口：${url}`)
+  const url = `http://localhost:5000/api/files?${queryParams.toString()}`
 
-  // TODO: axios.get(url).then(...)
+  try {
+    const res = await axios.get(url)
+
+    if (res.data.status !== "success" || !res.data.data) {
+      console.error("接口响应异常：", res.data)
+      fileResults.value = []
+      fileTotal.value = 0
+      return
+    }
+
+    const { files, total } = res.data.data
+    fileResults.value = files || []
+    fileTotal.value = total || 0
+  } catch (err) {
+    console.error("请求文件数据失败：", err)
+    fileResults.value = []
+    fileTotal.value = 0
+  }
 }
+
+  
+  // 搜索文件：统一构造 tag_ids
+//   const searchFiles = () => {
+//   const tagIds = selectedItems.value
+//     .filter(item => item.type === 'tag')
+//     .map(item => item.id)
+
+//   const folderIds = selectedItems.value
+//     .filter(item => item.type === 'folder')
+//     .map(item => item.id)
+
+//   // 构造查询参数
+//   const queryParams = new URLSearchParams()
+//   if (tagIds.length > 0) queryParams.append("tag_ids", tagIds.join(","))
+//   if (folderIds.length > 0) queryParams.append("folder_ids", folderIds.join(","))
+
+//   const url = `/api/files?${queryParams.toString()}`
+//   alert(`调用接口：${url}`)
+
+//   // TODO: axios.get(url).then(...)
+  
+// }}
+const searchFiles = () => {
+  currentPage.value = 1
+  fetchFiles()
+}
+const handlePageChange = (newPage) => {
+  currentPage.value = newPage
+  fetchFiles()
+}
+
+
 
   </script>
   
