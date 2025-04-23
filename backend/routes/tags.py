@@ -157,22 +157,34 @@ def get_tags():
                 return success(result)
 
             # 否则查 alias 表
+            # 否则查 alias 表（可能命中多个）
             cursor.execute("SELECT * FROM tag_aliases WHERE alias LIKE ?", (f"%{q}%",))
-            alias_row = cursor.fetchone()
-            if alias_row:
-                tag_id = alias_row["tag_id"]
-                cursor.execute("SELECT * FROM tags WHERE id = ?", (tag_id,))
-                tag = cursor.fetchone()
-                # cursor.execute("SELECT alias FROM tag_aliases WHERE tag_id = ?", (tag_id,))
-                # aliases = [row["alias"] for row in cursor.fetchall()]
-                cursor.execute("SELECT id, alias FROM tag_aliases WHERE tag_id = ?", (tag["id"],))
-                aliases = [{"id": row["id"], "name": row["alias"]} for row in cursor.fetchall()]
-                return success([{
-                    "id": tag["id"],
-                    "name": tag["name"],
-                    "category": tag["category"],
-                    "aliases": aliases
-                }])
+            alias_rows = cursor.fetchall()
+
+            if alias_rows:
+                result = []
+                seen_tag_ids = set()
+
+                for alias in alias_rows:
+                    tag_id = alias["tag_id"]
+                    if tag_id in seen_tag_ids:
+                        continue  # 去重
+                    seen_tag_ids.add(tag_id)
+
+                    cursor.execute("SELECT * FROM tags WHERE id = ?", (tag_id,))
+                    tag = cursor.fetchone()
+                    if tag:
+                        cursor.execute("SELECT id, alias FROM tag_aliases WHERE tag_id = ?", (tag_id,))
+                        aliases = [{"id": row["id"], "name": row["alias"]} for row in cursor.fetchall()]
+                        result.append({
+                            "id": tag["id"],
+                            "name": tag["name"],
+                            "category": tag["category"],
+                            "aliases": aliases
+                        })
+
+                return success(result)
+
 
             # 都没找到
             return success([])
