@@ -9,7 +9,7 @@
         <el-button type="primary" @click="search">搜索</el-button>
       </el-row>
   
-      <div v-if="tags.length === 1" style="margin-top: 20px">
+      <!-- <div v-if="tags.length === 1" style="margin-top: 20px">
         <el-card>
           <div>
             <strong>{{ tags[0].name }}</strong>（{{ tags[0].category }}）<br />
@@ -20,26 +20,74 @@
             <el-button type="primary" size="small" @click="searchFiles(tags[0].id)">查看文件</el-button>
           </div>
         </el-card>
-      </div>
+      </div> -->
   
-      <div v-else-if="tags.length > 1" style="margin-top: 20px">
-        <el-card v-for="tag in tags" :key="tag.id" style="margin-bottom: 10px">
-          <div>
-            <strong>{{ tag.name }}</strong>（{{ tag.category }}）
-            <el-button size="small" style="margin-left: 12px">管理</el-button>
-            <el-button size="small" type="primary" @click="searchFiles(tag.id)">搜索文件</el-button>
-          </div>
-          <div style="font-size: 12px; color: gray; margin-top: 5px">
-            别名：{{ tag.aliases.map(a => a.name).join(' / ') }}
-          </div>
-        </el-card>
-      </div>
+      <!-- <div v-else-if="tags.length > 1" style="margin-top: 24px"> -->
+      <div v-if="tags.length > 0" style="margin-top: 24px">
+        <div v-for="(tagGroup, category) in groupedTags" :key="category" style="margin-bottom: 24px">
+            <el-divider content-position="left">
+            <span class="category-divider-text">{{ category }}</span>
+            </el-divider>
+
+
+            <el-space wrap size="large">
+            <el-card
+                v-for="tag in tagGroup"
+                :key="tag.id"
+                style="width: 280px; background: #fdfdfd"
+                shadow="hover"
+            >
+                <div>
+                <div style="font-weight: bold; font-size: 16px;">{{ tag.name }}</div>
+                <div style="margin-top: 6px;">
+                    <div style="margin-top: 6px; min-height: 32px;">
+                    <template v-if="tag.aliases.length > 0">
+                        <el-tag
+                        v-for="alias in tag.aliases"
+                        :key="alias.id"
+                        type="info"
+                        size="small"
+                        effect="plain"  
+                        style="margin-right: 4px;"
+                        >
+                        {{ alias.name }}
+                        </el-tag>
+                    </template>
+                    <template v-else>
+                        <el-tag type="info" size="small"  disabled>无别名</el-tag>
+                    </template>
+                    </div>
+
+                </div>
+                <div style="margin-top: 12px; text-align: right;">
+                    <el-button size="small" @click="manageTag(tag)">管理</el-button>
+                    <el-button size="small" type="primary" @click="searchFiles(tag.id)">搜索文件</el-button>
+                </div>
+                </div>
+            </el-card>
+            </el-space>
+        </div>
+        </div>
+
     </div>
   </template>
   
   <script setup>
   import { ref } from 'vue'
   import axios from 'axios'
+  import { computed } from 'vue'
+
+    const groupedTags = computed(() => {
+    const groups = {}
+    for (const tag of tags.value) {
+        if (!groups[tag.category]) {
+        groups[tag.category] = []
+        }
+        groups[tag.category].push(tag)
+    }
+    return groups
+    })
+
   
   const keyword = ref('')
   const mode = ref('tag')
@@ -59,3 +107,11 @@
   }
   </script>
   
+
+  <style scoped>
+  .category-divider-text {
+    font-size: 18px;
+    font-weight: bold;
+    color: #000000;
+  }
+  </style>

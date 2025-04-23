@@ -1,4 +1,8 @@
 from flask import Flask
+from flask_cors import CORS
+
+
+
 from flasgger import Swagger
 
 from routes.tags import tags_bp
@@ -8,7 +12,7 @@ from routes.folders import folders_bp
 
 app = Flask(__name__)
 swagger = Swagger(app)
-
+CORS(app)
 # 注册蓝图
 app.register_blueprint(tags_bp, url_prefix="/api/tags")
 app.register_blueprint(files_bp, url_prefix="/api/files")
