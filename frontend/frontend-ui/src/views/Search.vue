@@ -101,7 +101,7 @@
         </el-card>
       </div>
       <!-- 文件搜索结果 -->
-<div v-if="fileResults.length > 0" style="margin-top: 40px">
+<div v-if="fileResults.length > 0" id="file-result-block" style="margin-top: 40px">
   <el-divider content-position="left">
     <span class="category-divider-text">文件搜索结果</span>
   </el-divider>
@@ -185,6 +185,8 @@
   import axios from 'axios'
   import { useRouter } from 'vue-router'
   import { Folder } from '@element-plus/icons-vue'
+  import { nextTick } from 'vue'
+
   
   const fileList = ref([])
   const fileTotal = ref(0)
@@ -329,9 +331,15 @@
 //   // TODO: axios.get(url).then(...)
   
 // }}
-const searchFiles = () => {
+const searchFiles = async () => {
   currentPage.value = 1
-  fetchFiles()
+  await fetchFiles()
+  nextTick(() => {
+    const target = document.getElementById("file-result-block")
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth" })
+    }
+  })
 }
 const handlePageChange = (newPage) => {
   currentPage.value = newPage
