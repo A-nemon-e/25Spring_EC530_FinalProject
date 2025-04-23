@@ -251,11 +251,11 @@ def list_files():
         type: string
         required: false
         description: 多个 tag_id，逗号分隔（表示交集筛选，例如 tag1,tag2 表示必须同时具备这两个标签）
-      - name: folder_id
+      - name: folder_ids
         in: query
         type: string
         required: false
-        description: 文件夹 ID（仅返回属于该文件夹的文件）
+        description: 多个文件夹 ID（逗号分隔，表示交集）
       - name: page
         in: query
         type: integer
@@ -331,7 +331,10 @@ def list_files():
               type: string
               example: null
     """
-    folder_id = request.args.get("folder_id")
+    # folder_id = request.args.get("folder_id")
+    folder_ids_str = request.args.get("folder_ids")
+    folder_ids = folder_ids_str.split(",") if folder_ids_str else []
+
     tag_ids_str = request.args.get("tag_ids")  # 示例: tag1,tag2
     page = int(request.args.get("page", 1))
     size = int(request.args.get("size", 20))
@@ -339,7 +342,7 @@ def list_files():
 
     tag_ids = tag_ids_str.split(",") if tag_ids_str else []
 
-    if not folder_id and not tag_ids:
+    if not folder_ids and not tag_ids:
         return error("必须提供 tag_ids 或 folder_id 至少一个", 400)
 
     with get_db() as (conn, cursor):
@@ -367,9 +370,18 @@ def list_files():
             where_clauses.append(f"f.id IN ({placeholders})")
             params.extend(file_ids)
 
-        if folder_id:
-            where_clauses.append("EXISTS (SELECT 1 FROM file_folders ff WHERE ff.file_id = f.id AND ff.folder_id = ?)")
-            params.append(folder_id)
+        # if folder_id:
+        #     where_clauses.append("EXISTS (SELECT 1 FROM file_folders ff WHERE ff.file_id = f.id AND ff.folder_id = ?)")
+        #     params.append(folder_id)
+        if folder_ids:
+          for fid in folder_ids:
+              where_clauses.append("""
+                  EXISTS (
+                      SELECT 1 FROM file_folders ff
+                      WHERE ff.file_id = f.id AND ff.folder_id = ?
+                  )
+              """)
+              params.append(fid)
 
         where_sql = "WHERE " + " AND ".join(where_clauses)
 
