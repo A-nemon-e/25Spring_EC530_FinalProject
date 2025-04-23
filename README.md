@@ -1,7 +1,13 @@
 # 25Spring_EC530_FinalProject
 
+
+## note april 23
+
+增加缩略图（文件展示页面）
+
+
 ## Note April 2
-conda env 530-final is for backend.
+~~conda env 530-final is for backend.~~
 给前端的note: tag有一个category是title。文件展示需要用这个title的name（全称）
 
 表files里的name创建时应不能修改
