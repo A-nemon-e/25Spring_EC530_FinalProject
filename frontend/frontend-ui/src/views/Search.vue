@@ -159,7 +159,7 @@
           :key="tag.id"
           :color="getCategoryColor(tag.category)"
           size="small"
-          style="margin-right: 6px; color: white;"
+          style="margin-right: 6px; color: #505055;; font-size: 14px; padding: 6px 10px; height: auto;"
         >
           {{ tag.name }}（{{ tag.category }}）
         </el-tag>
@@ -202,14 +202,14 @@
 
   // ✅ 可用颜色池（自动循环分配）
   const availableColors = [
-    '#409EFFe0', // 蓝
-    '#67C23Ae0', // 绿
-    '#E6A23Ce0', // 橙
-    '#F56C6Ce0', // 红
-    '#909399e0', // 灰
-    '#8E44ADe0', // 紫
-    '#1abc9ce0', // 青
-    '#E84393e0'  // 粉
+    '#f7e1d7', // 
+    '#edbfb8', //
+    '#dedbd2', // 
+    '#b0c4b1', // 
+    '#4a5759', // 
+    '#78290f', // 
+    '#b8b8ff', // 
+    '#E84393'  // 
   ]
 
   let colorIndex = 0
