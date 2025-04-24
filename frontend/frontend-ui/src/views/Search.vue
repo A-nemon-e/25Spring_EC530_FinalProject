@@ -393,7 +393,7 @@ const getFileTitle = (file) => {
   return titleTag ? titleTag.name : file.name
 }
 
-// 获取 title 标签别名（你需要在后端把 aliases 一并传回来）
+// 获取 title 标签别名（你需要在后端把 aliases 一并传回来）（暂不实现，后端不传）
 const getTitleAliases = (file) => {
   const titleTag = file.tags.find(t => t.category === 'title')
   return titleTag && titleTag.aliases ? titleTag.aliases.map(a => a.name) : []
