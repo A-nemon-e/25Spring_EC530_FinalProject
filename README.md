@@ -14,6 +14,7 @@
 
 GPT proposed project structure:(PostgreSQL)
 
+
 ```
 your-project/
 ├── backend/                    # 后端部分
