@@ -14,10 +14,10 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 @files_bp.route("/upload", methods=["POST"])
 def upload_file():
     """
-    上传文件并指定标签和文件夹
+    Upload a file and assign tags and folders.
     ---
     tags:
-      - 文件
+      - File
     consumes:
       - multipart/form-data
     parameters:
@@ -25,27 +25,27 @@ def upload_file():
         in: formData
         type: file
         required: true
-        description: 要上传的 PDF 文件
+        description: The PDF file to upload
       - name: tags
         in: formData
         type: string
-        required: false  # ✅ 改为 false
-        description: JSON 字符串形式的 tag_id 列表（可选）
+        required: false  # ✅ Changed to false
+        description: JSON string of tag_id list (optional)
       - name: folders
         in: formData
         type: string
-        required: false  # ✅ 改为 false
-        description: JSON 字符串形式的 folder_id 列表（可选）
+        required: false  # ✅ Changed to false
+        description: JSON string of folder_id list (optional)
     responses:
       201:
-        description: 上传成功
+        description: Upload successful
     """
     file = request.files.get("file")
     tags_raw = request.form.get("tags")
     folders_raw = request.form.get("folders")
 
     if not file:
-        return error("缺少文件", 400)
+        return error("Missing file", 400)
 
     tag_ids = []
     folder_ids = []
@@ -56,17 +56,15 @@ def upload_file():
         if folders_raw:
             folder_ids = json.loads(folders_raw)
     except Exception:
-        return error("tags 和 folders 必须是 JSON 数组字符串", 400)
+        return error("tags and folders must be JSON array strings", 400)
 
     if not isinstance(tag_ids, list) or not isinstance(folder_ids, list):
-        return error("tags 和 folders 格式错误，必须是数组", 400)
-
-
+        return error("tags and folders must be arrays", 400)
 
     original_name = file.filename
     file_id = generate_uuid()
 
-    # 生成路径
+    # Generate file path
     today = datetime.now(timezone.utc)
     folder_name = today.strftime("%Y_%m")
     folder_path = os.path.join(UPLOAD_DIR, folder_name)
@@ -77,13 +75,13 @@ def upload_file():
     try:
         file.save(save_path)
     except Exception as e:
-        return error(f"保存文件失败：{str(e)}", 500)
+        return error(f"Failed to save file: {str(e)}", 500)
 
     uploaded_at = today.isoformat()
 
     try:
         with get_db() as (conn, cursor):
-            # 插入 files 表
+            # Insert into files table
             cursor.execute("""
                 INSERT INTO files (id, name, upload_path, size, uploaded_at)
                 VALUES (?, ?, ?, ?, ?)
@@ -95,24 +93,24 @@ def upload_file():
                 uploaded_at
             ))
 
-            # 插入 file_tags
+            # Insert into file_tags
             for tag_id in tag_ids:
                 cursor.execute("SELECT id FROM tags WHERE id = ?", (tag_id,))
                 if not cursor.fetchone():
-                    raise ValueError(f"标签 ID 不存在：{tag_id}")
+                    raise ValueError(f"Tag ID not found: {tag_id}")
                 cursor.execute("INSERT INTO file_tags (file_id, tag_id) VALUES (?, ?)", (file_id, tag_id))
 
-            # 插入 file_folders
+            # Insert into file_folders
             for folder_id in folder_ids:
                 cursor.execute("SELECT id FROM folders WHERE id = ?", (folder_id,))
                 if not cursor.fetchone():
-                    raise ValueError(f"文件夹 ID 不存在：{folder_id}")
+                    raise ValueError(f"Folder ID not found: {folder_id}")
                 cursor.execute("INSERT INTO file_folders (file_id, folder_id) VALUES (?, ?)", (file_id, folder_id))
 
     except Exception as e:
         if os.path.exists(save_path):
             os.remove(save_path)
-        return error(f"数据库写入失败：{str(e)}", 500)
+        return error(f"Database write failed: {str(e)}", 500)
 
     return success({
         "file_id": file_id,
@@ -120,33 +118,31 @@ def upload_file():
         "uploaded_at": uploaded_at
     }, code=201)
 
-
-
 @files_bp.route("/<file_id>", methods=["GET"])
 def get_file(file_id):
     """
-    获取单个文件详情
+    Get details of a single file.
     ---
     tags:
-      - 文件
+      - File
     parameters:
       - name: file_id
         in: path
         type: string
         required: true
-        description: 文件 ID
+        description: File ID
     responses:
       200:
-        description: 成功返回文件详情
+        description: Successfully returned file details
     """
     with get_db() as (conn, cursor):
-        # 查询文件主信息
+        # Query file main information
         cursor.execute("SELECT * FROM files WHERE id = ?", (file_id,))
         file = cursor.fetchone()
         if not file:
-            return error("文件不存在", 404)
+            return error("File not found", 404)
 
-        # 查询标签信息
+        # Query tag information
         cursor.execute("""
             SELECT t.id, t.name, t.category
             FROM file_tags ft
@@ -155,7 +151,7 @@ def get_file(file_id):
         """, (file_id,))
         tags = [dict(row) for row in cursor.fetchall()]
 
-        # 查询文件夹信息
+        # Query folder information
         cursor.execute("""
             SELECT f.id, f.name, f.parent_id
             FROM file_folders ff
@@ -177,10 +173,10 @@ def get_file(file_id):
 @files_bp.route("/<file_id>", methods=["PUT"])
 def update_file_relations(file_id):
     """
-    修改文件的标签和文件夹绑定（传空视为清空，必须显式提供不修改部分）
+    Update file's tags and folder bindings (empty list means clear, must explicitly provide both fields)
     ---
     tags:
-      - 文件
+      - File
     parameters:
       - name: file_id
         in: path
@@ -200,40 +196,40 @@ def update_file_relations(file_id):
               items: { type: string }
     responses:
       200:
-        description: 修改成功
+        description: Update successful
     """
     data = request.get_json()
     tags = data.get("tags")
     folders = data.get("folders")
 
     if tags is None or folders is None:
-        return error("tags 和 folders 都必须提供（可为空数组）", 400)
+        return error("Both tags and folders must be provided (can be empty arrays)", 400)
 
     if not isinstance(tags, list) or not isinstance(folders, list):
-        return error("tags 和 folders 必须是数组", 400)
+        return error("tags and folders must be arrays", 400)
 
     with get_db() as (conn, cursor):
-        # 检查文件是否存在
+        # Check if file exists
         cursor.execute("SELECT id FROM files WHERE id = ?", (file_id,))
         if not cursor.fetchone():
-            return error("文件不存在", 404)
+            return error("File not found", 404)
 
-        # 清除旧绑定
+        # Clear old bindings
         cursor.execute("DELETE FROM file_tags WHERE file_id = ?", (file_id,))
         cursor.execute("DELETE FROM file_folders WHERE file_id = ?", (file_id,))
 
-        # 插入新的标签
+        # Insert new tags
         for tag_id in tags:
             cursor.execute("SELECT id FROM tags WHERE id = ?", (tag_id,))
             if not cursor.fetchone():
-                return error(f"标签不存在：{tag_id}", 400)
+                return error(f"Tag not found: {tag_id}", 400)
             cursor.execute("INSERT INTO file_tags (file_id, tag_id) VALUES (?, ?)", (file_id, tag_id))
 
-        # 插入新的文件夹
+        # Insert new folders
         for folder_id in folders:
             cursor.execute("SELECT id FROM folders WHERE id = ?", (folder_id,))
             if not cursor.fetchone():
-                return error(f"文件夹不存在：{folder_id}", 400)
+                return error(f"Folder not found: {folder_id}", 400)
             cursor.execute("INSERT INTO file_folders (file_id, folder_id) VALUES (?, ?)", (file_id, folder_id))
 
     return success({"file_id": file_id}, 200)
@@ -241,101 +237,41 @@ def update_file_relations(file_id):
 @files_bp.route("", methods=["GET"])
 def list_files():
     """
-    分页获取文件（支持多个标签 ID 交集和文件夹 ID，返回完整路径）
+    Get a paginated list of files (supporting multiple tag ID and folder ID intersection, returns full path).
     ---
     tags:
-      - 文件
+      - File
     parameters:
       - name: tag_ids
         in: query
         type: string
         required: false
-        description: 多个 tag_id，逗号分隔（表示交集筛选，例如 tag1,tag2 表示必须同时具备这两个标签）
+        description: Multiple tag_ids separated by commas (intersection filter, e.g., tag1,tag2 means both must be present)
       - name: folder_ids
         in: query
         type: string
         required: false
-        description: 多个文件夹 ID（逗号分隔，表示交集）
+        description: Multiple folder IDs separated by commas (intersection filter)
       - name: page
         in: query
         type: integer
         required: false
         default: 1
-        description: 页码，从 1 开始
+        description: Page number, starting from 1
       - name: size
         in: query
         type: integer
         required: false
         default: 20
-        description: 每页条数
+        description: Number of items per page
     responses:
       200:
-        description: 成功返回文件分页列表
-        schema:
-          type: object
-          properties:
-            status:
-              type: string
-              example: success
-            code:
-              type: integer
-              example: 200
-            data:
-              type: object
-              properties:
-                total:
-                  type: integer
-                  example: 32
-                files:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                      name:
-                        type: string
-                      size:
-                        type: integer
-                      upload_path:
-                        type: string
-                      uploaded_at:
-                        type: string
-                      tags:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                            name:
-                              type: string
-                            category:
-                              type: string
-                      folders:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                            name:
-                              type: string
-                            parent_id:
-                              type: string
-                            full_path:
-                              type: array
-                              items:
-                                type: string
-            error:
-              type: string
-              example: null
+        description: Successfully returned paginated file list
     """
-    # folder_id = request.args.get("folder_id")
     folder_ids_str = request.args.get("folder_ids")
     folder_ids = folder_ids_str.split(",") if folder_ids_str else []
 
-    tag_ids_str = request.args.get("tag_ids")  # 示例: tag1,tag2
+    tag_ids_str = request.args.get("tag_ids")
     page = int(request.args.get("page", 1))
     size = int(request.args.get("size", 2000000))
     offset = (page - 1) * size
@@ -343,10 +279,10 @@ def list_files():
     tag_ids = tag_ids_str.split(",") if tag_ids_str else []
 
     if not folder_ids and not tag_ids:
-        return error("必须提供 tag_ids 或 folder_id 至少一个", 400)
+        return error("Must provide at least one of tag_ids or folder_ids", 400)
 
     with get_db() as (conn, cursor):
-        # 1. tag_ids 子查询
+        # 1. Tag_ids subquery
         file_ids = None
         if tag_ids:
             tag_placeholders = ','.join(['?'] * len(tag_ids))
@@ -359,9 +295,9 @@ def list_files():
             cursor.execute(tag_sql, tag_ids + [len(tag_ids)])
             file_ids = [row["file_id"] for row in cursor.fetchall()]
             if not file_ids:
-                return success({"total": 0, "files": []})  # 无匹配结果
+                return success({"total": 0, "files": []})
 
-        # 2. 构建主查询
+        # 2. Build main query
         where_clauses = []
         params = []
 
@@ -370,22 +306,19 @@ def list_files():
             where_clauses.append(f"f.id IN ({placeholders})")
             params.extend(file_ids)
 
-        # if folder_id:
-        #     where_clauses.append("EXISTS (SELECT 1 FROM file_folders ff WHERE ff.file_id = f.id AND ff.folder_id = ?)")
-        #     params.append(folder_id)
         if folder_ids:
-          for fid in folder_ids:
-              where_clauses.append("""
-                  EXISTS (
-                      SELECT 1 FROM file_folders ff
-                      WHERE ff.file_id = f.id AND ff.folder_id = ?
-                  )
-              """)
-              params.append(fid)
+            for fid in folder_ids:
+                where_clauses.append("""
+                    EXISTS (
+                        SELECT 1 FROM file_folders ff
+                        WHERE ff.file_id = f.id AND ff.folder_id = ?
+                    )
+                """)
+                params.append(fid)
 
         where_sql = "WHERE " + " AND ".join(where_clauses)
 
-        # 3. 查询文件记录
+        # 3. Query file records
         cursor.execute(f"""
             SELECT * FROM files f
             {where_sql}
@@ -394,14 +327,14 @@ def list_files():
         """, params + [size, offset])
         files = cursor.fetchall()
 
-        # 4. 查询总数
+        # 4. Query total count
         cursor.execute(f"""
             SELECT COUNT(*) FROM files f
             {where_sql}
         """, params)
         total = cursor.fetchone()[0]
 
-        # 5. 加载所有文件夹构建路径
+        # 5. Load all folders to build full path
         cursor.execute("SELECT id, name, parent_id FROM folders")
         folder_dict = {f["id"]: dict(f) for f in cursor.fetchall()}
 
@@ -417,7 +350,7 @@ def list_files():
         for f in files:
             file_id = f["id"]
 
-            # 查标签
+            # Query tags
             cursor.execute("""
                 SELECT t.id, t.name, t.category
                 FROM file_tags ft JOIN tags t ON ft.tag_id = t.id
@@ -425,7 +358,7 @@ def list_files():
             """, (file_id,))
             tags = [dict(row) for row in cursor.fetchall()]
 
-            # 查文件夹并附加完整路径
+            # Query folders and build full paths
             cursor.execute("""
                 SELECT fo.id, fo.name, fo.parent_id
                 FROM file_folders ff JOIN folders fo ON ff.folder_id = fo.id
@@ -454,46 +387,44 @@ def list_files():
         "files": result
     })
 
-
 @files_bp.route("/<file_id>", methods=["DELETE"])
 def delete_file(file_id):
     """
-    删除文件及其所有关联
+    Delete a file and all its associations.
     ---
     tags:
-      - 文件
+      - File
     parameters:
       - name: file_id
         in: path
         type: string
         required: true
-        description: 要删除的文件 ID
+        description: File ID to delete
     responses:
       200:
-        description: 删除成功
+        description: Delete successful
     """
     with get_db() as (conn, cursor):
-        # 1. 查找文件是否存在
+        # 1. Check if file exists
         cursor.execute("SELECT * FROM files WHERE id = ?", (file_id,))
         file = cursor.fetchone()
         if not file:
-            return error("文件不存在", 404)
+            return error("File not found", 404)
 
         upload_path = file["upload_path"]
 
-        # 2. 删除本地文件
+        # 2. Delete local file
         if upload_path and os.path.exists(upload_path):
             try:
                 os.remove(upload_path)
             except Exception as e:
-                return error(f"本地文件删除失败：{str(e)}", 500)
+                return error(f"Failed to delete local file: {str(e)}", 500)
 
-        # 3. 删除中间表中的所有绑定
+        # 3. Delete all bindings from intermediate tables
         cursor.execute("DELETE FROM file_tags WHERE file_id = ?", (file_id,))
         cursor.execute("DELETE FROM file_folders WHERE file_id = ?", (file_id,))
 
-        # 4. 删除文件主记录
+        # 4. Delete main file record
         cursor.execute("DELETE FROM files WHERE id = ?", (file_id,))
 
     return success({"deleted_file_id": file_id}, 200)
-
