@@ -5,13 +5,12 @@ from utils.response import success, error
 tags_bp = Blueprint("tags", __name__)
 
 @tags_bp.route("", methods=["POST"]) # /api/tags
-
 def create_tag():
     """
-    添加新标签
+    Add a new tag.
     ---
     tags:
-      - 标签
+      - Tag
     parameters:
       - name: body
         in: body
@@ -21,13 +20,13 @@ def create_tag():
           properties:
             name:
               type: string
-              example: 老肖
+              example: Lao Xiao
             category:
               type: string
-              example: 作曲家
+              example: Composer
     responses:
       201:
-        description: 成功添加标签
+        description: Tag added successfully
         schema:
           type: object
           properties:
@@ -55,26 +54,26 @@ def create_tag():
     category = data.get("category")
 
     if not name or not category:
-        return error("标签名（name）和分类（category）是必填字段", 400)
+        return error("Name and category are required fields", 400)
 
     try:
         with get_db() as (conn, cursor):
             name_clean = name.strip()
             category_clean = category.strip()
 
-            # 1. 检查是否已经是主标签
+            # 1. Check if the tag already exists as a main tag
             cursor.execute("SELECT id FROM tags WHERE name = ? AND category = ?", (name_clean, category_clean))
             existing = cursor.fetchone()
             if existing:
-                return error("标签已存在", 409)
+                return error("Tag already exists", 409)
 
-            # 2. 检查是否与任意 alias 冲突（任何标签下）
+            # 2. Check if there is a conflict with any alias
             cursor.execute("SELECT id FROM tag_aliases WHERE alias = ?", (name_clean,))
             alias_conflict = cursor.fetchone()
             if alias_conflict:
-                return error("该标签名已作为别名存在", 409)
+                return error("This name already exists as an alias", 409)
 
-            # 3. 插入
+            # 3. Insert new tag
             cursor.execute(
                 "INSERT INTO tags (name, category) VALUES (?, ?)",
                 (name_clean, category_clean)
@@ -82,7 +81,7 @@ def create_tag():
             tag_id = cursor.lastrowid
 
     except Exception as e:
-        return error(f"数据库写入失败：{str(e)}", 500)
+        return error(f"Database write failed: {str(e)}", 500)
 
     return success({
         "id": tag_id,
@@ -93,19 +92,19 @@ def create_tag():
 @tags_bp.route("", methods=["GET"])  # /api/tags?q=xxx
 def get_tags():
     """
-    获取标签（可按关键词查询）
+    Retrieve tags (optional keyword search).
     ---
     tags:
-      - 标签
+      - Tag
     parameters:
       - name: q
         in: query
         type: string
         required: false
-        description: 标签名或别名（可选）
+        description: Tag name or alias (optional)
     responses:
       200:
-        description: 标签信息（包括别名）
+        description: Tag information (including aliases)
         schema:
           type: object
           properties:
@@ -135,16 +134,13 @@ def get_tags():
         if query:
             q = query.strip()
 
-            # 尝试匹配主标签名
+            # Try to match main tag name
             cursor.execute("SELECT * FROM tags WHERE name LIKE ?", (f"%{q}%",))
             tags = cursor.fetchall()
 
             if tags:
-                # 找到主标签，查出所有别名
                 result = []
                 for tag in tags:
-                    # cursor.execute("SELECT alias FROM tag_aliases WHERE tag_id = ?", (tag["id"],))
-                    # aliases = [row["alias"] for row in cursor.fetchall()]
                     cursor.execute("SELECT id, alias FROM tag_aliases WHERE tag_id = ?", (tag["id"],))
                     aliases = [{"id": row["id"], "name": row["alias"]} for row in cursor.fetchall()]
 
@@ -156,8 +152,7 @@ def get_tags():
                     })
                 return success(result)
 
-            # 否则查 alias 表
-            # 否则查 alias 表（可能命中多个）
+            # Otherwise search in aliases
             cursor.execute("SELECT * FROM tag_aliases WHERE alias LIKE ?", (f"%{q}%",))
             alias_rows = cursor.fetchall()
 
@@ -168,7 +163,7 @@ def get_tags():
                 for alias in alias_rows:
                     tag_id = alias["tag_id"]
                     if tag_id in seen_tag_ids:
-                        continue  # 去重
+                        continue  # Remove duplicates
                     seen_tag_ids.add(tag_id)
 
                     cursor.execute("SELECT * FROM tags WHERE id = ?", (tag_id,))
@@ -185,18 +180,15 @@ def get_tags():
 
                 return success(result)
 
-
-            # 都没找到
+            # No matches found
             return success([])
 
         else:
-            # 不传 q，返回所有主标签（不含 alias）
+            # No keyword provided, return all main tags
             cursor.execute("SELECT * FROM tags ORDER BY id DESC")
             tags = cursor.fetchall()
             result = []
             for tag in tags:
-                # cursor.execute("SELECT alias FROM tag_aliases WHERE tag_id = ?", (tag["id"],))
-                # aliases = [row["alias"] for row in cursor.fetchall()]
                 cursor.execute("SELECT id, alias FROM tag_aliases WHERE tag_id = ?", (tag["id"],))
                 aliases = [{"id": row["id"], "name": row["alias"]} for row in cursor.fetchall()]
                 
@@ -211,16 +203,16 @@ def get_tags():
 @tags_bp.route("/<int:tag_id>/alias", methods=["POST"])
 def add_alias(tag_id):
     """
-    给指定标签添加别名
+    Add an alias to a specified tag.
     ---
     tags:
-      - 标签
+      - Tag
     parameters:
       - name: tag_id
         in: path
         type: integer
         required: true
-        description: 标签 ID
+        description: Tag ID
       - name: body
         in: body
         required: true
@@ -229,10 +221,10 @@ def add_alias(tag_id):
           properties:
             alias:
               type: string
-              example: 老肖
+              example: Lao Xiao
     responses:
       201:
-        description: 添加成功
+        description: Alias added successfully
         schema:
           type: object
           properties:
@@ -254,22 +246,22 @@ def add_alias(tag_id):
     alias = data.get("alias", "").strip()
 
     if not alias:
-        return error("alias 是必填字段", 400)
+        return error("Alias is a required field", 400)
 
     with get_db() as (conn, cursor):
-        # 检查标签是否存在
+        # Check if the tag exists
         cursor.execute("SELECT * FROM tags WHERE id = ?", (tag_id,))
         tag = cursor.fetchone()
         if not tag:
-            return error("指定的标签不存在", 404)
+            return error("The specified tag does not exist", 404)
 
-        # 检查是否已存在此 alias（任何标签下）
+        # Check if alias already exists
         cursor.execute("SELECT * FROM tag_aliases WHERE alias = ?", (alias,))
         existing = cursor.fetchone()
         if existing:
-            return error("该别名已被占用", 409)
+            return error("This alias already exists", 409)
 
-        # 插入别名
+        # Insert the alias
         cursor.execute("INSERT INTO tag_aliases (tag_id, alias) VALUES (?, ?)", (tag_id, alias))
 
     return success({
@@ -277,31 +269,30 @@ def add_alias(tag_id):
         "alias": alias
     }, code=201)
 
-
 @tags_bp.route("/<int:tag_id>", methods=["DELETE"])
 def delete_tag(tag_id):
     """
-    删除主标签（及其所有别名）
+    Delete a main tag (along with all its aliases).
     ---
     tags:
-      - 标签
+      - Tag
     parameters:
       - name: tag_id
         in: path
         type: integer
         required: true
-        description: 要删除的标签 ID
+        description: Tag ID to delete
     responses:
       200:
-        description: 删除成功
+        description: Deletion successful
     """
     with get_db() as (conn, cursor):
         cursor.execute("SELECT * FROM tags WHERE id = ?", (tag_id,))
         tag = cursor.fetchone()
         if not tag:
-            return error("标签不存在", 404)
+            return error("Tag not found", 404)
 
-        # 删除主标签（别名表设置外键自动删除 或手动删除都可）
+        # Delete main tag (and its aliases)
         cursor.execute("DELETE FROM tags WHERE id = ?", (tag_id,))
         cursor.execute("DELETE FROM tag_aliases WHERE tag_id = ?", (tag_id,))
 
@@ -310,27 +301,26 @@ def delete_tag(tag_id):
 @tags_bp.route("/alias/<int:alias_id>", methods=["DELETE"])
 def delete_alias(alias_id):
     """
-    删除标签别名
+    Delete a tag alias.
     ---
     tags:
-      - 标签
+      - Tag
     parameters:
       - name: alias_id
         in: path
         type: integer
         required: true
-        description: 要删除的别名 ID
+        description: Alias ID to delete
     responses:
       200:
-        description: 删除成功
+        description: Deletion successful
     """
     with get_db() as (conn, cursor):
         cursor.execute("SELECT * FROM tag_aliases WHERE id = ?", (alias_id,))
         alias = cursor.fetchone()
         if not alias:
-            return error("别名不存在", 404)
+            return error("Alias not found", 404)
 
         cursor.execute("DELETE FROM tag_aliases WHERE id = ?", (alias_id,))
 
     return success({"deleted_alias_id": alias_id}, 200)
-
