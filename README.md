@@ -8,121 +8,130 @@
 
 ~~The conda environment `530-final` is for the backend.~~  
 Frontend note: For tags, there is a category called **title**.  
-When displaying files, you should use the **full name** of the title.
+When displaying files, the title's full name should be used.
 
-The `name` field in the `files` table should **not be editable** after creation.
+The `name` field in the `files` table should not be editable after creation.
 
 GPT-proposed project structure (PostgreSQL version):
 
 ```
 your-project/
-├── backend/
-│   ├── app.py
-│   ├── config.py
-│   ├── models/
-│   │   └── tag.py
-│   ├── routes/
-│   │   └── tags.py
-│   ├── services/
-│   ├── database.py
-│   ├── migrations/
-│   └── tests/
+├── backend/                    # Backend part
+│   ├── app.py                  # Main entry point
+│   ├── config.py               # Database configuration
+│   ├── models/                 # All SQLAlchemy models
+│   │   └── tag.py              # Example model
+│   ├── routes/                 # All API route modules
+│   │   └── tags.py             # Example route
+│   ├── services/               # Business logic modules (optional)
+│   ├── database.py             # Database initialization
+│   ├── migrations/             # Alembic migrations (if used)
+│   └── tests/                  # Unit test code
 │       └── test_tags.py
-├── frontend/
-│   ├── public/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   └── api/
-│   └── vite.config.js
-├── requirements.txt
-├── package.json
-├── .env
-├── README.md
+├── frontend/                   # Vue + Element UI project
+│   ├── public/                 # Static resources
+│   ├── src/                    # Main source code
+│   │   ├── components/         # Components (e.g., file tree, tag selector)
+│   │   ├── pages/              # Pages
+│   │   └── api/                # Axios API wrappers
+│   └── vite.config.js          # Build configuration
+├── requirements.txt            # Python dependencies
+├── package.json                # Frontend dependencies
+├── .env                        # Local environment variables (e.g., database connection)
+├── README.md                   # Project documentation
 └── .gitignore
 ```
 
 GPT-proposed project structure (SQLite version):
 
 ```
-├── backend/
-│   ├── app.py
-│   ├── database.py
-│   ├── init_db.py
-│   ├── mydatabase.db
-│   ├── routes/
-│   │   ├── tags.py
-│   │   ├── files.py
-│   │   ├── folders.py
-│   │   └── search.py
-│   ├── utils/
-│   │   ├── idgen.py
-│   │   ├── response.py
-│   │   └── validation.py
-│   └── config.py
-├── uploads/
-│   └── ...
-└── README.md
+├── backend/                        # Root directory for backend code
+│   ├── app.py                      # Flask app main entry point, mounting all blueprints
+│   ├── database.py                 # SQLite connection wrapper (with foreign key support)
+│   ├── init_db.py                  # Create database and 6 table structures (already completed)
+│   ├── mydatabase.db               # SQLite database file (auto-generated)
+│
+│   ├── routes/                     # API modules (split by function)
+│   │   ├── tags.py                 # Tags module (create, retrieve tags)
+│   │   ├── files.py                # File upload and query
+│   │   ├── folders.py              # Folder creation, retrieval, tree structure
+│   │   └── search.py               # Search: find files by tag name or alias
+│
+│   ├── utils/                      # Utility modules (UUID, path handling, validation, etc.)
+│   │   ├── idgen.py                # Generate UUID strings
+│   │   ├── response.py             # Standardized JSON responses
+│   │   └── validation.py           # Parameter validation functions (optional)
+│
+│   └── config.py                   # Project configuration (database path, upload folder, etc.)
+├── uploads/                        # Directory for storing uploaded files
+│   └── ...                         # Customizable file system structure
+└── README.md                       # Project documentation
 ```
 
 ### API Endpoints
 
 #### Files
-| Function | Path | Method | Description |
+| Type | Path | Method | Description |
 |:---|:---|:---|:---|
-| Upload file | `/api/files/upload` | POST | Upload a file and optionally specify associated folders and tags |
-| Get file details | `/api/files/<file_id>` | GET | Retrieve information about a single file |
+| Upload file | `/api/files/upload` | POST | Upload a file, optionally specify associated folders and tags |
+| File details | `/api/files/<file_id>` | GET | Retrieve a single file's information |
 | Delete file | `/api/files/<file_id>` | DELETE | Delete a file and its associations |
-| Update file metadata | `/api/files/{file_id}` | PUT | Update file's associated tags and folders (empty lists will clear) |
-| Search files | `/api/files` | GET | Paginated retrieval of files (filter by tag IDs and folder IDs, return full folder path and tags) |
+| Update file info | `/api/files/{file_id}` | PUT | Modify a file's associated tags and folders (explicitly provide empty lists to clear) |
+| Search files | `/api/files` | GET | Paginated file retrieval (supports filtering by tag IDs and folder IDs, returns full folder paths and tags) |
 
 #### Folders
-| Function | Path | Method | Description |
+| Type | Path | Method | Description |
 |:---|:---|:---|:---|
-| Get folder tree | `/api/folders/tree` | GET | Retrieve all folders in a hierarchical structure |
-| Create folder | `/api/folders` | POST | Create a new folder (supports `parent_id`) |
-| Delete folder | `/api/folders/<folder_id>` | DELETE | Delete a specific folder |
-| Search folders | `/api/folders/search?q=` | GET | Search folders by keyword and return full path |
+| Get folder tree | `/api/folders/tree` | GET | Retrieve all folder hierarchy structure |
+| Create folder | `/api/folders` | POST | Create a new folder (supports parent_id) |
+| Delete folder | `/api/folders/<folder_id>` | DELETE | Delete a specified folder |
+| Search folders | `/api/folders/search?q=` | GET | Search folders and return full paths |
 
 #### Tags
-| Function | Path | Method | Description |
+| Type | Path | Method | Description |
 |:---|:---|:---|:---|
-| Get tags | `/api/tags` | GET | Retrieve all tags (optional category filter) |
+| Get tags | `/api/tags` | GET | Retrieve all tags (optionally filter by category) |
 | Add tag | `/api/tags` | POST | Create a new tag |
 | Add alias | `/api/tags/<tag_id>/alias` | POST | Add an alias to a specific tag |
 
 ---
 
-### Database Schema
+### Database Table Designs
 
 ```
-* files *
+*files*
+
     id
     name
     upload_path
     size
     uploaded_at
 
-* folders *
+*folders*
+
     id
     name
     parent_id (supports nesting)
     created_at
 
-* file_folders * (association table)
+*file_folders* (association table)
+
     file_id
     folder_id
 
-* tags *
+*tags*
+
     id
     name
     category
 
-* tag_aliases *
+*tag_aliases*
+
     tag_id
     alias
 
-* file_tags *
+*file_tags*
+
     file_id
     tag_id
 ```
@@ -136,7 +145,7 @@ GPT-proposed project structure (SQLite version):
 | status | string | "success" or "error" |
 | data | dict/null | Result data if successful |
 | error | string/null | Error message if failed |
-| code | int | HTTP status code (for frontend logic handling) |
+| code | int | HTTP status code (used by frontend logic) |
 
 Successful response example:
 
