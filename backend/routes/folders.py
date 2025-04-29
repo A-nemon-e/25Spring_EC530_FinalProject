@@ -191,3 +191,44 @@ def search_folders():
             })
 
         return success(result)
+
+
+@folders_bp.route("/<string:folder_id>/children", methods=["GET"])
+def get_folder_children(folder_id):
+    """
+    获取指定文件夹的直接子文件夹和文件
+    ---
+    tags:
+      - 文件夹
+    parameters:
+      - name: folder_id
+        in: path
+        type: string
+        required: true
+        description: 父文件夹 ID
+    responses:
+      200:
+        description: 返回子文件夹列表和文件列表
+    """
+    with get_db() as (conn, cursor):
+        # 查找子文件夹
+        cursor.execute(
+            "SELECT id, name, parent_id FROM folders WHERE parent_id = ? ORDER BY name ASC",
+            (folder_id,)
+        )
+        subfolders = [dict(row) for row in cursor.fetchall()]
+
+        # 查找该文件夹下的文件
+        cursor.execute("""
+            SELECT f.id, f.name, f.size, f.upload_path, f.uploaded_at
+            FROM files f
+            JOIN file_folders ff ON f.id = ff.file_id
+            WHERE ff.folder_id = ?
+            ORDER BY f.uploaded_at DESC
+        """, (folder_id,))
+        files = [dict(row) for row in cursor.fetchall()]
+
+    return success({
+        "folders": subfolders,
+        "files": files
+    })
