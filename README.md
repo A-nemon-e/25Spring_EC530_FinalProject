@@ -82,6 +82,7 @@ GPT proposed project structure:(SQLite)
 创建文件夹	/api/folders	POST	新建文件夹（支持 parent_id）
 删除文件夹	/api/folders/<folder_id>	DELETE	删除指定文件夹
 搜索文件夹  /api/folders/search?q= GET 搜索文件夹返回全路径
+子文件（夹）  /api/folders/:id/children GET 返回某id的所有子文件、子文件夹
 
 功能类型	路径	方法	描述
 获取标签	/api/tags	GET	获取所有标签（可按分类筛选）

@@ -15,11 +15,12 @@ import HelloWorld from './components/HelloWorld.vue'
 </template> -->
 
 <template>
-  <Search />
+  <!-- <Search /> -->
+  <router-view />
 </template>
 
 <script setup>
-import Search from './views/Search.vue'
+// import Search from './views/Search.vue'
 </script>
 
 <style scoped>

@@ -193,7 +193,7 @@ def search_folders():
         return success(result)
 
 
-@folders_bp.route("/<string:folder_id>/children", methods=["GET"])
+@folders_bp.route("/<folder_id>/children", methods=["GET"])
 def get_folder_children(folder_id):
     """
     获取指定文件夹的直接子文件夹和文件
