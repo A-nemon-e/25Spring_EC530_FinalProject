@@ -208,7 +208,7 @@ def get_folder_children(folder_id):
         description: 父文件夹 ID
     responses:
       200:
-        description: 返回子文件夹列表和文件列表
+        description: 返回子文件夹列表和文件列表，包括文件tag
     """
     with get_db() as (conn, cursor):
         # 查找子文件夹
@@ -227,6 +227,13 @@ def get_folder_children(folder_id):
             ORDER BY f.uploaded_at DESC
         """, (folder_id,))
         files = [dict(row) for row in cursor.fetchall()]
+        for file in files:
+          cursor.execute("""
+              SELECT t.id, t.name, t.category
+              FROM file_tags ft JOIN tags t ON ft.tag_id = t.id
+              WHERE ft.file_id = ?
+          """, (file["id"],))
+          file["tags"] = [dict(row) for row in cursor.fetchall()]
 
     return success({
         "folders": subfolders,
