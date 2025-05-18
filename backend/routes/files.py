@@ -125,7 +125,7 @@ def upload_file():
 @files_bp.route("/<file_id>", methods=["GET"])
 def get_file(file_id):
     """
-    获取单个文件详情
+    获取单个文件详情（包含标签别名）
     ---
     tags:
       - 文件
@@ -138,6 +138,75 @@ def get_file(file_id):
     responses:
       200:
         description: 成功返回文件详情
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: success
+            code:
+              type: integer
+              example: 200
+            data:
+              type: object
+              properties:
+                id:
+                  type: string
+                  example: abcd-1234
+                name:
+                  type: string
+                  example: example.pdf
+                size:
+                  type: integer
+                  example: 145667
+                upload_path:
+                  type: string
+                  example: /uploads/2024/example.pdf
+                uploaded_at:
+                  type: string
+                  example: "2024-04-28T08:15:00Z"
+                tags:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        example: 肖斯塔科维奇
+                      category:
+                        type: string
+                        example: 作曲家
+                      aliases:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 1001
+                            name:
+                              type: string
+                              example: 老肖
+                folders:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: f123
+                      name:
+                        type: string
+                        example: 2024演出
+                      parent_id:
+                        type: string
+                        example: f001
+            error:
+              type: string
+              example: null
     """
     with get_db() as (conn, cursor):
         # 查询文件主信息
@@ -146,14 +215,22 @@ def get_file(file_id):
         if not file:
             return error("文件不存在", 404)
 
-        # 查询标签信息
+        # 查询标签信息 + 别名
         cursor.execute("""
             SELECT t.id, t.name, t.category
             FROM file_tags ft
             JOIN tags t ON ft.tag_id = t.id
             WHERE ft.file_id = ?
         """, (file_id,))
-        tags = [dict(row) for row in cursor.fetchall()]
+        raw_tags = cursor.fetchall()
+
+        tags = []
+        for tag in raw_tags:
+            tag = dict(tag)
+            cursor.execute("SELECT id, alias FROM tag_aliases WHERE tag_id = ?", (tag["id"],))
+            aliases = [{"id": row["id"], "name": row["alias"]} for row in cursor.fetchall()]
+            tag["aliases"] = aliases
+            tags.append(tag)
 
         # 查询文件夹信息
         cursor.execute("""
@@ -173,6 +250,8 @@ def get_file(file_id):
             "tags": tags,
             "folders": folders
         })
+
+
 
 @files_bp.route("/<file_id>", methods=["PUT"])
 def update_file_relations(file_id):
