@@ -4,7 +4,20 @@
     <div class="thumbnail-placeholder">PDF 预览图（占位）</div>
 
     <!-- 主标题 -->
-    <h2 style="margin-top: 16px;">{{ title }}</h2>
+    <div style="display: flex; align-items: center;">
+      <h2 style="margin-top: 16px; margin-right: 12px;">
+        <el-tooltip
+          effect="dark"
+          :content="titleAliases.join(' / ')"
+          placement="top"
+          v-if="titleAliases.length > 0"
+        >
+          {{ title }}
+        </el-tooltip>
+        <span v-else>{{ title }}</span>
+      </h2>
+      <el-tag type="warning" size="small" v-if="isFallbackTitle">无Title标签，显示文件名</el-tag>
+    </div>
 
     <!-- 标签展示 -->
     <div v-for="(tags, category) in groupedTags" :key="category" style="margin: 8px 0;">
@@ -19,6 +32,7 @@
           <el-tag
             size="small"
             style="margin: 4px; cursor: pointer;"
+            @click="openTagEditor(tag)"
           >
             {{ tag.name }}
           </el-tag>
@@ -26,6 +40,7 @@
         <el-tag
           size="small"
           style="margin: 4px; cursor: pointer;"
+          @click="openTagEditor(tag)"
           v-else
         >
           {{ tag.name }}
@@ -33,7 +48,12 @@
       </span>
     </div>
 
-    
+    <!-- 文件基本信息 -->
+    <div style="margin-top: 20px; font-size: 14px; color: #555;">
+      <p>文件路径：{{ fileData.upload_path }}</p>
+      <p>上传时间：{{ formatDate(fileData.uploaded_at) }}</p>
+      <p>文件大小：{{ formatSize(fileData.size) }}</p>
+    </div>
 
     <!-- 所属虚拟文件夹 -->
     <div v-if="fileData.folders.length > 0" style="margin-top: 16px;">
@@ -47,19 +67,25 @@
         {{ buildFullPath(folder.id).join(" / ") }}
       </span>
     </div>
-    
-    <!-- 文件基本信息 -->
-    <div style="margin-top: 20px; font-size: 14px; color: #555;">
-      <p>文件路径：{{ fileData.upload_path }}</p>
-      <p>上传时间：{{ formatDate(fileData.uploaded_at) }}</p>
-      <p>文件大小：{{ formatSize(fileData.size) }}</p>
-    </div>
 
     <!-- 操作按钮 -->
     <div style="margin-top: 24px;">
       <el-button type="primary">下载</el-button>
-      <el-button>编辑</el-button>
+      <el-button @click="editFile">编辑</el-button>
     </div>
+
+    <!-- 标签编辑对话框（预留） -->
+    <el-dialog
+      v-model="isTagEditorVisible"
+      title="编辑标签"
+      width="400px"
+    >
+      <p>这是标签编辑对话框（功能暂不实现）。</p>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="isTagEditorVisible = false">取消</el-button>
+        <el-button type="primary" @click="isTagEditorVisible = false">确认</el-button>
+      </div>
+    </el-dialog>
   </div>
 
   <!-- 骨架屏 -->
@@ -88,8 +114,12 @@ const fileData = ref({
 })
 
 const title = ref("")
+const titleAliases = ref([])
+const isFallbackTitle = ref(false)
 const groupedTags = ref({})  // category -> [{name, id, aliases}]
 const folderDict = ref({})   // folder id -> {id, name, parent_id}
+const isTagEditorVisible = ref(false)
+const currentEditingTag = ref(null)
 
 // ==================== 加载文件信息 ====================
 
@@ -103,7 +133,15 @@ const loadFileData = async () => {
 
     // 设置主标题
     const titleTag = fileData.value.tags.find(t => t.category === 'title')
-    title.value = titleTag ? titleTag.name : fileData.value.name
+    if (titleTag) {
+      title.value = titleTag.name
+      titleAliases.value = titleTag.aliases.map(a => a.name)
+      isFallbackTitle.value = false
+    } else {
+      title.value = fileData.value.name
+      titleAliases.value = []
+      isFallbackTitle.value = true
+    }
 
     // 分组标签（排除 title 类别）
     groupedTags.value = {}
@@ -123,6 +161,7 @@ const loadFileData = async () => {
   }
 }
 
+// 展平文件夹树
 const flatten = (tree) => {
   const result = []
   const dfs = (nodes) => {
@@ -148,6 +187,16 @@ const buildFullPath = (id) => {
 const formatDate = (str) => new Date(str).toLocaleString()
 const formatSize = (bytes) => `${(bytes / 1024).toFixed(1)} KB`
 const goToFolder = (id) => router.push(`/folder/${id}`)
+
+// 标签编辑预留
+const openTagEditor = (tag) => {
+  currentEditingTag.value = tag
+  isTagEditorVisible.value = true
+}
+
+const editFile = () => {
+  alert("跳转到文件编辑页面（暂不实现）")
+}
 
 onMounted(() => loadFileData())
 </script>
