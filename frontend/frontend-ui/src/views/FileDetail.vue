@@ -1,12 +1,12 @@
 <template>
-  <div style="padding: 24px;">
-    <!-- 缩略图（占位） -->
+  <div v-if="fileData.name" style="padding: 24px;">
+    <!-- 缩略图占位 -->
     <div class="thumbnail-placeholder">PDF 预览图（占位）</div>
 
     <!-- 主标题 -->
     <h2 style="margin-top: 16px;">{{ title }}</h2>
 
-    <!-- 标签区域 -->
+    <!-- 标签展示 -->
     <div v-for="(tags, category) in groupedTags" :key="category" style="margin: 8px 0;">
       <strong>{{ category }}：</strong>
       <span v-for="tag in tags" :key="tag.id">
@@ -33,14 +33,9 @@
       </span>
     </div>
 
-    <!-- 文件信息 -->
-    <div style="margin-top: 20px; font-size: 14px; color: #555;">
-      <p>文件路径：{{ fileData.upload_path }}</p>
-      <p>上传时间：{{ formatDate(fileData.uploaded_at) }}</p>
-      <p>文件大小：{{ formatSize(fileData.size) }}</p>
-    </div>
+    
 
-    <!-- 所属虚拟文件夹路径 -->
+    <!-- 所属虚拟文件夹 -->
     <div v-if="fileData.folders.length > 0" style="margin-top: 16px;">
       <strong>所属路径：</strong>
       <span
@@ -52,12 +47,24 @@
         {{ buildFullPath(folder.id).join(" / ") }}
       </span>
     </div>
+    
+    <!-- 文件基本信息 -->
+    <div style="margin-top: 20px; font-size: 14px; color: #555;">
+      <p>文件路径：{{ fileData.upload_path }}</p>
+      <p>上传时间：{{ formatDate(fileData.uploaded_at) }}</p>
+      <p>文件大小：{{ formatSize(fileData.size) }}</p>
+    </div>
 
     <!-- 操作按钮 -->
     <div style="margin-top: 24px;">
       <el-button type="primary">下载</el-button>
       <el-button>编辑</el-button>
     </div>
+  </div>
+
+  <!-- 骨架屏 -->
+  <div v-else style="padding: 24px;">
+    <el-skeleton rows="6" animated />
   </div>
 </template>
 
@@ -69,33 +76,51 @@ import axios from 'axios'
 const route = useRoute()
 const router = useRouter()
 
-const fileData = ref(null)
+// 初始化文件数据
+const fileData = ref({
+  id: '',
+  name: '',
+  size: 0,
+  upload_path: '',
+  uploaded_at: '',
+  tags: [],
+  folders: []
+})
+
 const title = ref("")
 const groupedTags = ref({})  // category -> [{name, id, aliases}]
 const folderDict = ref({})   // folder id -> {id, name, parent_id}
 
-// ==================== 加载核心 ====================
+// ==================== 加载文件信息 ====================
 
 const loadFileData = async () => {
-  const res = await axios.get(`/api/files/${route.params.id}`)
-  fileData.value = res.data.data
+  try {
+    const fileId = route.params.id
+    const res = await axios.get(`http://localhost:5000/api/files/${fileId}`)
 
-  // 设置主标题
-  const titleTag = fileData.value.tags.find(t => t.category === 'title')
-  title.value = titleTag ? titleTag.name : fileData.value.name
+    // 设置文件基本信息
+    fileData.value = res.data.data || {}
 
-  // 分组标签（排除 title 类别）
-  groupedTags.value = {}
-  for (const tag of fileData.value.tags) {
-    if (tag.category === 'title') continue
-    if (!groupedTags.value[tag.category]) groupedTags.value[tag.category] = []
-    groupedTags.value[tag.category].push(tag)
+    // 设置主标题
+    const titleTag = fileData.value.tags.find(t => t.category === 'title')
+    title.value = titleTag ? titleTag.name : fileData.value.name
+
+    // 分组标签（排除 title 类别）
+    groupedTags.value = {}
+    for (const tag of fileData.value.tags) {
+      if (tag.category === 'title') continue
+      if (!groupedTags.value[tag.category]) groupedTags.value[tag.category] = []
+      groupedTags.value[tag.category].push(tag)
+    }
+
+    // 加载文件夹路径
+    const treeRes = await axios.get('http://localhost:5000/api/folders/tree')
+    const folders = flatten(treeRes.data.data)
+    folderDict.value = Object.fromEntries(folders.map(f => [f.id, f]))
+  } catch (error) {
+    console.error("加载文件信息失败：", error)
+    alert("加载文件信息失败，请检查后端是否正常运行")
   }
-
-  // 加载文件夹路径
-  const treeRes = await axios.get('/api/folders/tree')
-  const folders = flatten(treeRes.data.data)
-  folderDict.value = Object.fromEntries(folders.map(f => [f.id, f]))
 }
 
 const flatten = (tree) => {
@@ -129,15 +154,14 @@ onMounted(() => loadFileData())
 
 <style scoped>
 .thumbnail-placeholder {
-  width: 240px;
-  height: 320px;
-  background: #f0f0f0;
-  border: 1px dashed #ccc;
+  width: 200px;
+  height: 200px;
+  background-color: #f2f2f2;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #aaa;
-  font-size: 14px;
-  margin-bottom: 20px;
+  color: #888;
+  font-weight: bold;
+  margin-bottom: 16px;
 }
 </style>

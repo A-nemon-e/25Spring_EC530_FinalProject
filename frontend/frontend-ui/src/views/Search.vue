@@ -169,7 +169,8 @@
     <!-- 操作按钮 -->
     <div style="text-align: right;">
       <el-button size="small" type="primary">下载</el-button>
-      <el-button size="small">详情</el-button>
+      <!-- <el-button size="small">详情</el-button> -->
+      <el-button size="small" @click.stop="goToFileDetail(file.id)">详情</el-button>
     </div>
   </div>
 </el-card>
@@ -196,6 +197,7 @@
   import { useRouter } from 'vue-router'
   import { Folder } from '@element-plus/icons-vue'
   import { nextTick } from 'vue'
+  
 
   // ✅ 分类 → 颜色 映射
   const categoryColorMap = ref({})
@@ -346,6 +348,7 @@
   }
 }
 
+
   
   // 搜索文件：统一构造 tag_ids
 //   const searchFiles = () => {
@@ -386,6 +389,11 @@ const handlePageChange = (newPage) => {
 
 // import { useRouter } from 'vue-router'
 const router = useRouter()
+
+// 跳转详情
+const goToFileDetail = (fileId) => {
+  router.push(`/file/${fileId}`)
+}
 
 // 获取主标题（title 标签或文件名）
 const getFileTitle = (file) => {

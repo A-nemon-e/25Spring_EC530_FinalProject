@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Search from '../views/Search.vue'
 import FolderExplorer from '../views/FolderExplorer.vue'
+import FileDetail from '../views/FileDetail.vue'
 
 const routes = [
   {
@@ -14,6 +15,11 @@ const routes = [
   {
     path: '/folder/:id',
     component: FolderExplorer
+  },
+  {
+    path: '/file/:id',
+    component: FileDetail,
+    name: 'file-detail'
   }
 ]
 
