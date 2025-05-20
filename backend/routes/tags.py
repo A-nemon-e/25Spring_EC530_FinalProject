@@ -334,3 +334,108 @@ def delete_alias(alias_id):
 
     return success({"deleted_alias_id": alias_id}, 200)
 
+
+@tags_bp.route("/<int:tag_id>", methods=["PUT"])
+def update_tag(tag_id):
+    """
+    修改主标签信息（名称或分类）
+    ---
+    tags:
+      - 标签
+    parameters:
+      - name: tag_id
+        in: path
+        type: integer
+        required: true
+        description: 要修改的标签 ID
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+              example: 新的标签名
+            category:
+              type: string
+              example: 新的分类
+    responses:
+      200:
+        description: 修改成功
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: success
+            code:
+              type: integer
+              example: 200
+            data:
+              type: object
+              properties:
+                id:
+                  type: integer
+                name:
+                  type: string
+                category:
+                  type: string
+            error:
+              type: string
+              example: null
+      404:
+        description: 标签不存在
+      400:
+        description: 参数错误
+    """
+    data = request.get_json()
+    name = data.get("name")
+    category = data.get("category")
+
+    if not name or not category:
+        return error("名称（name）和分类（category）不能为空", 400)
+
+    try:
+        with get_db() as (conn, cursor):
+            # 确认标签存在
+            cursor.execute("SELECT * FROM tags WHERE id = ?", (tag_id,))
+            tag = cursor.fetchone()
+            if not tag:
+                return error("标签不存在", 404)
+
+            # 检查 tags 表中是否有重复（不包含当前）
+            # cursor.execute("""
+            #     SELECT id FROM tags
+            #     WHERE name = ? AND category = ? AND id != ?
+            # """, (name.strip(), category.strip(), tag_id))
+            cursor.execute("""
+                SELECT id FROM tags
+                WHERE name = ? AND id != ?
+            """, (name.strip(), tag_id))
+            if cursor.fetchone():
+                return error("已存在相同名称的标签", 409)
+
+            # 检查是否与别名冲突（所有 tag_aliases 中）
+            cursor.execute("""
+                SELECT * FROM tag_aliases
+                WHERE alias = ?
+            """, (name.strip(),))
+            alias_conflict = cursor.fetchone()
+            if alias_conflict:
+                return error("该名称已被用作其他标签的别名", 409)
+
+            # 执行更新
+            cursor.execute("""
+                UPDATE tags SET name = ?, category = ?
+                WHERE id = ?
+            """, (name.strip(), category.strip(), tag_id))
+
+        return success({
+            "id": tag_id,
+            "name": name,
+            "category": category
+        })
+
+    except Exception as e:
+        return error(f"数据库更新失败：{str(e)}", 500)

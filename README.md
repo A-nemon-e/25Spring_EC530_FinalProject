@@ -69,6 +69,7 @@ GPT proposed project structure:(SQLite)
 
 ```
 ### 路由
+见swagger页面
 ```
 功能类型	路径	方法	描述
 上传文件	/api/files/upload	POST	上传文件并指定所属文件夹和标签（可选）
