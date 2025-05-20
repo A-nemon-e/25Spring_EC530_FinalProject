@@ -30,7 +30,7 @@
           v-if="tag.aliases.length > 0"
         >
           <el-tag
-            size="small"
+            size="medium"
             style="margin: 4px; cursor: pointer;"
             @click="openTagEditor(tag)"
           >
@@ -38,7 +38,7 @@
           </el-tag>
         </el-tooltip>
         <el-tag
-          size="small"
+          size="medium"
           style="margin: 4px; cursor: pointer;"
           @click="openTagEditor(tag)"
           v-else
