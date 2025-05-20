@@ -5,7 +5,7 @@
 
     <!-- 主标题 -->
     <div style="display: flex; align-items: center;">
-      <h2 style="margin-top: 16px; margin-right: 12px;">
+      <!-- <h2 style="margin-top: 16px; margin-right: 12px;">
         <el-tooltip
           effect="dark"
           :content="titleAliases.join(' / ')"
@@ -15,7 +15,19 @@
           {{ title }}
         </el-tooltip>
         <span v-else>{{ title }}</span>
+      </h2> -->
+      <h2 style="margin-top: 16px; margin-right: 12px; cursor: pointer;" @click="openTagEditor(titleTag)">
+        <el-tooltip
+          v-if="titleAliases.length > 0"
+          effect="dark"
+          :content="titleAliases.join(' / ')"
+          placement="top"
+        >
+          <span>{{ title }}</span>
+        </el-tooltip>
+        <span v-else>{{ title }}</span>
       </h2>
+
       <el-tag type="warning" size="small" v-if="isFallbackTitle">无Title标签，显示文件名</el-tag>
     </div>
 
@@ -30,16 +42,16 @@
           v-if="tag.aliases.length > 0"
         >
           <el-tag
-            size="medium"
-            style="margin: 4px; cursor: pointer;"
+            size="large"
+            style="margin: 2px; cursor: pointer;"
             @click="openTagEditor(tag)"
           >
             {{ tag.name }}
           </el-tag>
         </el-tooltip>
         <el-tag
-          size="medium"
-          style="margin: 4px; cursor: pointer;"
+          size="large"
+          style="margin: 2px; cursor: pointer;"
           @click="openTagEditor(tag)"
           v-else
         >
@@ -49,7 +61,7 @@
     </div>
 
     <!-- 文件基本信息 -->
-    <div style="margin-top: 20px; font-size: 14px; color: #555;">
+    <div style="margin-top: 20px; font-size: 15px; color: #555;">
       <p>文件路径：{{ fileData.upload_path }}</p>
       <p>上传时间：{{ formatDate(fileData.uploaded_at) }}</p>
       <p>文件大小：{{ formatSize(fileData.size) }}</p>
@@ -131,17 +143,32 @@ const loadFileData = async () => {
     // 设置文件基本信息
     fileData.value = res.data.data || {}
 
+
+    const titleTag = ref(null)
     // 设置主标题
-    const titleTag = fileData.value.tags.find(t => t.category === 'title')
-    if (titleTag) {
-      title.value = titleTag.name
-      titleAliases.value = titleTag.aliases.map(a => a.name)
+    // const titleTag = fileData.value.tags.find(t => t.category === 'title')
+    // if (titleTag) {
+    //   title.value = titleTag.name
+    //   titleAliases.value = titleTag.aliases.map(a => a.name)
+    //   isFallbackTitle.value = false
+    // } else {
+    //   title.value = fileData.value.name
+    //   titleAliases.value = []
+    //   isFallbackTitle.value = true
+    // }
+    const tag = fileData.value.tags.find(t => t.category === 'title')
+    if (tag) {
+      title.value = tag.name
+      titleTag.value = tag
+      titleAliases.value = tag.aliases.map(a => a.name)
       isFallbackTitle.value = false
     } else {
       title.value = fileData.value.name
+      titleTag.value = null
       titleAliases.value = []
       isFallbackTitle.value = true
     }
+
 
     // 分组标签（排除 title 类别）
     groupedTags.value = {}
@@ -189,10 +216,17 @@ const formatSize = (bytes) => `${(bytes / 1024).toFixed(1)} KB`
 const goToFolder = (id) => router.push(`/folder/${id}`)
 
 // 标签编辑预留
+// const openTagEditor = (tag) => {
+//   currentEditingTag.value = tag
+//   isTagEditorVisible.value = true
+// }
 const openTagEditor = (tag) => {
+  if (!tag && !title) return  //  如果传入的是 null 或 undefined，直接忽略
   currentEditingTag.value = tag
   isTagEditorVisible.value = true
 }
+
+
 
 const editFile = () => {
   alert("跳转到文件编辑页面（暂不实现）")
