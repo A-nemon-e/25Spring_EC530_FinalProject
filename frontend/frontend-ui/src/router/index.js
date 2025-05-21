@@ -10,16 +10,18 @@ const routes = [
   },
   {
     path: '/search',
+    name: 'search',
     component: Search
   },
   {
     path: '/folder/:id',
+    name: 'folder',
     component: FolderExplorer
   },
   {
     path: '/file/:id',
-    component: FileDetail,
-    name: 'file-detail'
+    name: 'file-detail',
+    component: FileDetail
   }
 ]
 
