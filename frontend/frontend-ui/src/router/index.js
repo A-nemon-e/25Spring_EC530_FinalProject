@@ -1,28 +1,17 @@
+// src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 import Search from '../views/Search.vue'
 import FolderExplorer from '../views/FolderExplorer.vue'
 import FileDetail from '../views/FileDetail.vue'
 
 const routes = [
-  {
-    path: '/',
-    redirect: '/search'
-  },
-  {
-    path: '/search',
-    name: 'search',
-    component: Search
-  },
-  {
-    path: '/folder/:id',
-    name: 'folder',
-    component: FolderExplorer
-  },
-  {
-    path: '/file/:id',
-    name: 'file-detail',
-    component: FileDetail
-  }
+  { path: '/', redirect: '/search' },
+  { path: '/search', component: Search },
+  { path: '/folder/:id', component: FolderExplorer },
+  { path: '/file/:id', component: FileDetail },
+  // 可选扩展
+  { path: '/tag-manager', component: { template: '<div>标签管理占位</div>' }},
+  { path: '/alias-manager', component: { template: '<div>别名管理占位</div>' }},
 ]
 
 const router = createRouter({

@@ -35,7 +35,8 @@
       <el-card
         v-for="file in files"
         :key="file.id"
-        style="margin-bottom: 14px"
+        
+        style="margin-bottom: 14px; cursor: pointer;"
         shadow="hover"
       >
         <div style="display: flex; justify-content: space-between;">
@@ -79,7 +80,9 @@
 
           <div style="text-align: right;">
             <el-button size="small" type="primary">下载</el-button>
-            <el-button size="small">详情</el-button>
+            <!-- <el-button size="small">详情</el-button> -->
+            <el-button size="small" @click.stop="goToFile(file.id)">详情</el-button>
+
           </div>
         </div>
       </el-card>
@@ -148,6 +151,12 @@ watch(() => route.params.id, async () => {
   await loadFolder()
 })
 
+
+
+const goToFile = (fileId) => {
+  router.push(`/file/${fileId}`)
+}
+
 const goToFolder = (id) => {
   router.push(`/folder/${id}`)
 }
@@ -175,6 +184,11 @@ const getCategoryColor = (category) => {
   }
   return categoryColorMap.value[category]
 }
+
+// import { useRouter } from 'vue-router'
+
+
+
 </script>
 
 <style scoped>
