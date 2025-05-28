@@ -2,7 +2,8 @@
 <template>
   <el-menu :default-active="activeMenu" router class="el-menu-vertical-demo">
     <el-menu-item index="/search">🔍 搜索</el-menu-item>
-    <el-menu-item index="/folder">📁 文件夹视图</el-menu-item>
+    <el-menu-item :index="folderViewRoute">📂 文件夹视图</el-menu-item>
+
     <el-menu-item index="/file">📄 文件详情视图</el-menu-item>
     <el-divider />
     <el-menu-item index="/tag-manager">🏷️ 标签管理</el-menu-item>
@@ -11,8 +12,17 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+// import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { computed } from 'vue'
+import { useFolderExplorerStore } from '../stores/folderStore'
+
+const store = useFolderExplorerStore()
+
+const folderViewRoute = computed(() => {
+  return store.folderId ? `/folder/${store.folderId}` : '/folder'
+})
+
 
 const route = useRoute()
 

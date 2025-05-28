@@ -3,7 +3,7 @@
   <div style="display: flex; height: 100vh;">
     <Sidebar />
     <div style="flex: 1; overflow-y: auto;">
-      <router-view />
+      <router-view :key="$route.params.id"/>
     </div>
   </div>
 </template>

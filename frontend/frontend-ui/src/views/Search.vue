@@ -155,7 +155,7 @@
                   <el-tag
                     v-for="tag in getOtherTags(file)"
                     :key="tag.id"
-                    :color="getCategoryColor(tag.category)"
+                    :color="searchStore.getCategoryColor(tag.category)"
                     size="small"
                     style="margin-right: 6px; color: #505055; font-size: 14px; padding: 6px 10px;"
                   >
@@ -186,22 +186,37 @@
   </div>
 </template>
 <script setup>
-import { ref, computed, nextTick } from 'vue'
+// import { ref, computed, nextTick } from 'vue'
+import { computed, nextTick } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useSearchStore } from '../stores/searchStore'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { Folder } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
-const keyword = ref('')
-const mode = ref('tag')
-const tags = ref([])
-const folders = ref([])
-const selectedItems = ref([])
-const fileResults = ref([])
-const fileTotal = ref(0)
-const currentPage = ref(1)
-const pageSize = ref(20)
+// const keyword = ref('')
+// const mode = ref('tag')
+// const tags = ref([])
+// const folders = ref([])
+// const selectedItems = ref([])
+// const fileResults = ref([])
+// const fileTotal = ref(0)
+// const currentPage = ref(1)
+// const pageSize = ref(20)
+const searchStore = useSearchStore()
+const {
+  keyword,
+  mode,
+  tags,
+  folders,
+  selectedItems,
+  fileResults,
+  fileTotal,
+  currentPage,
+  pageSize
+} = storeToRefs(searchStore)
 
 // ✅ 标签分类分组
 const groupedTags = computed(() => {
@@ -213,20 +228,25 @@ const groupedTags = computed(() => {
   return groups
 })
 
-// ✅ 颜色映射
-const categoryColorMap = ref({})
-const availableColors = [
-  '#f7e1d7', '#edbfb8', '#dedbd2', '#b0c4b1',
-  '#4a5759', '#78290f', '#b8b8ff', '#E84393'
-]
-let colorIndex = 0
-const getCategoryColor = (category) => {
-  if (!categoryColorMap.value[category]) {
-    categoryColorMap.value[category] = availableColors[colorIndex % availableColors.length]
-    colorIndex++
-  }
-  return categoryColorMap.value[category]
-}
+// // ✅ 颜色映射
+// const categoryColorMap = ref({})
+// const availableColors = [
+//   '#f7e1d7', '#edbfb8', '#dedbd2', '#b0c4b1',
+//   '#4a5759', '#78290f', '#b8b8ff', '#E84393'
+// ]
+// let colorIndex = 0
+// const getCategoryColor = (category) => {
+//   if (!categoryColorMap.value[category]) {
+//     categoryColorMap.value[category] = availableColors[colorIndex % availableColors.length]
+//     colorIndex++
+//   }
+//   return categoryColorMap.value[category]
+// }
+
+
+// 使用方法（在模板或 JS 中）
+
+
 
 // ✅ 搜索标签或文件夹
 const search = async () => {
@@ -332,6 +352,9 @@ const handlePageChange = (page) => {
   currentPage.value = page
   fetchFiles()
 }
+
+
+
 </script>
 
 <style scoped>

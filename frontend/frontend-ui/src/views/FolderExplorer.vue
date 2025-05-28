@@ -23,7 +23,7 @@
           style="width: 200px; cursor: pointer;"
           shadow="hover"
         >
-          <el-icon><Folder /></el-icon>
+          <el-icon><FolderIcon /></el-icon>
           <span style="margin-left: 8px;">{{ folder.name }}</span>
         </el-card>
       </el-space>
@@ -69,7 +69,7 @@
               <el-tag
                 v-for="tag in getOtherTags(file)"
                 :key="tag.id"
-                :color="getCategoryColor(tag.category)"
+                :color="store.getCategoryColor(tag.category)"
                 size="small"
                 style="margin-right: 6px; color: #505055; font-size: 14px; padding: 6px 10px; height: auto;"
               >
@@ -80,7 +80,7 @@
 
           <div style="text-align: right;">
             <el-button size="small" type="primary">下载</el-button>
-            <!-- <el-button size="small">详情</el-button> -->
+            
             <el-button size="small" @click.stop="goToFile(file.id)">详情</el-button>
 
           </div>
@@ -91,74 +91,42 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+
+import { onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
-import { Folder } from '@element-plus/icons-vue'
+import { storeToRefs } from 'pinia'
+import { useFolderExplorerStore } from '../stores/folderStore'
+import { Folder as FolderIcon } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
+const store = useFolderExplorerStore()
 
-const folderId = ref(null)
-const folders = ref([])
-const files = ref([])
-const currentPath = ref([])
+// —— 关键：拆出响应式 refs ——  
+const { folderId, folders, files, currentPath } = storeToRefs(store)
+// 方法直接从 store 上拿  
+const { loadAllFolders, loadFolder } = store
 
-const allFoldersDict = ref({})
-
-const loadAllFolders = async () => {
-  const res = await axios.get('http://localhost:5000/api/folders/tree')
-  const folderList = flattenFolders(res.data.data)
-  allFoldersDict.value = Object.fromEntries(folderList.map(f => [f.id, f]))
-}
-
-const flattenFolders = (tree) => {
-  const result = []
-  const dfs = (nodes) => {
-    for (const node of nodes) {
-      result.push({ id: node.id, name: node.name, parent_id: node.parent_id })
-      if (node.children) dfs(node.children)
-    }
-  }
-  dfs(tree)
-  return result
-}
-
-const buildCurrentPath = (id) => {
-  const path = []
-  let current = allFoldersDict.value[id]
-  while (current) {
-    path.unshift(current)
-    current = allFoldersDict.value[current.parent_id]
-  }
-  currentPath.value = path
-}
-
-const loadFolder = async () => {
-  folderId.value = route.params.id
-  const res = await axios.get(`http://localhost:5000/api/folders/${folderId.value}/children`)
-  folders.value = res.data.data.folders
-  files.value = res.data.data.files
-  buildCurrentPath(folderId.value)
-}
-
+// —— 初始加载一次全量目录 + 当前目录 ——  
 onMounted(async () => {
   await loadAllFolders()
-  await loadFolder()
+  if (route.params.id) {
+    await loadFolder(route.params.id)
+  }
 })
 
-watch(() => route.params.id, async () => {
-  await loadFolder()
-})
-
-
+// —— 导航按钮：先加载数据，再跳路由 ——  
+const goToFolder = async (id) => {
+  if (id !== route.params.id) {
+    await loadFolder(id)           // ← 数据先更新  
+    router.push(`/folder/${id}`)   // ← 再跳路由  
+  } else {
+    await loadFolder(id)
+  }
+}
 
 const goToFile = (fileId) => {
   router.push(`/file/${fileId}`)
-}
-
-const goToFolder = (id) => {
-  router.push(`/folder/${id}`)
 }
 
 const getFileTitle = (file) => {
@@ -174,18 +142,6 @@ const formatDate = (ts) => {
   return new Date(ts).toLocaleString()
 }
 
-const categoryColorMap = ref({})
-const availableColors = ['#f7e1d7', '#edbfb8', '#dedbd2', '#b0c4b1', '#4a5759', '#78290f', '#b8b8ff', '#E84393']
-let colorIndex = 0
-const getCategoryColor = (category) => {
-  if (!categoryColorMap.value[category]) {
-    categoryColorMap.value[category] = availableColors[colorIndex % availableColors.length]
-    colorIndex++
-  }
-  return categoryColorMap.value[category]
-}
-
-// import { useRouter } from 'vue-router'
 
 
 
