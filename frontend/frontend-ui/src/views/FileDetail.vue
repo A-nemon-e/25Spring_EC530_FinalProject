@@ -1,5 +1,5 @@
 <template>
-  <div v-if="fileData.name" style="padding: 24px;">
+  <div v-if="fileData" style="padding: 24px;">
     <!-- 缩略图占位 -->
     <div class="thumbnail-placeholder">PDF 预览图（占位）</div>
 
@@ -68,7 +68,7 @@
     </div>
 
     <!-- 所属虚拟文件夹 -->
-    <div v-if="fileData.folders.length > 0" style="margin-top: 16px;">
+    <div v-if="fileData && fileData.folders && fileData.folders.length > 0">
       <strong>所属路径：</strong>
       <span
         v-for="folder in fileData.folders"
@@ -107,109 +107,72 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+// import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
+// import { useRoute } from 'vue-router'
+import { onMounted, ref, computed } from 'vue'
+import { useFileStore } from '../stores/fileStore'
+
+// const route = useRoute()
+const store = useFileStore()
+
+onMounted(() => {
+  store.loadFileData(route.params.id)
+})
+
+// 以下原来的变量都改成 computed 或直接从 store 拿值
+// const fileData = computed(() => store.fileData)
+const buildFullPath = store.buildFullPath
+
 
 const route = useRoute()
 const router = useRouter()
 
-// 初始化文件数据
-const fileData = ref({
-  id: '',
-  name: '',
-  size: 0,
-  upload_path: '',
-  uploaded_at: '',
-  tags: [],
-  folders: []
+
+
+// const title = ref("")
+// const titleAliases = ref([])
+// const isFallbackTitle = ref(false)
+// const groupedTags = ref({})  // category -> [{name, id, aliases}]
+
+const fileData = computed(() => store.fileData)
+
+const titleTag = computed(() =>
+  fileData.value?.tags?.find((t) => t.category === 'title') ?? null
+)
+
+const title = computed(() =>
+  titleTag.value ? titleTag.value.name : fileData.value?.name ?? ''
+)
+
+const titleAliases = computed(() =>
+  titleTag.value ? titleTag.value.aliases.map((a) => a.name) : []
+)
+
+const isFallbackTitle = computed(() => !titleTag.value)
+
+const groupedTags = computed(() => {
+  const result = {}
+  if (!fileData.value?.tags) return result
+  for (const tag of fileData.value.tags) {
+    if (tag.category === 'title') continue
+    if (!result[tag.category]) result[tag.category] = []
+    result[tag.category].push(tag)
+  }
+  return result
 })
 
-const title = ref("")
-const titleAliases = ref([])
-const isFallbackTitle = ref(false)
-const groupedTags = ref({})  // category -> [{name, id, aliases}]
 const folderDict = ref({})   // folder id -> {id, name, parent_id}
 const isTagEditorVisible = ref(false)
 const currentEditingTag = ref(null)
 
-// ==================== 加载文件信息 ====================
-
-const loadFileData = async () => {
-  try {
-    const fileId = route.params.id
-    const res = await axios.get(`http://localhost:5000/api/files/${fileId}`)
-
-    // 设置文件基本信息
-    fileData.value = res.data.data || {}
+// ==================== 加载文件信息 ============已改为store获取==
 
 
-    const titleTag = ref(null)
-    // 设置主标题
-    // const titleTag = fileData.value.tags.find(t => t.category === 'title')
-    // if (titleTag) {
-    //   title.value = titleTag.name
-    //   titleAliases.value = titleTag.aliases.map(a => a.name)
-    //   isFallbackTitle.value = false
-    // } else {
-    //   title.value = fileData.value.name
-    //   titleAliases.value = []
-    //   isFallbackTitle.value = true
-    // }
-    const tag = fileData.value.tags.find(t => t.category === 'title')
-    if (tag) {
-      title.value = tag.name
-      titleTag.value = tag
-      titleAliases.value = tag.aliases.map(a => a.name)
-      isFallbackTitle.value = false
-    } else {
-      title.value = fileData.value.name
-      titleTag.value = null
-      titleAliases.value = []
-      isFallbackTitle.value = true
-    }
 
+// 展平文件夹树 已改为store获取=
 
-    // 分组标签（排除 title 类别）
-    groupedTags.value = {}
-    for (const tag of fileData.value.tags) {
-      if (tag.category === 'title') continue
-      if (!groupedTags.value[tag.category]) groupedTags.value[tag.category] = []
-      groupedTags.value[tag.category].push(tag)
-    }
-
-    // 加载文件夹路径
-    const treeRes = await axios.get('http://localhost:5000/api/folders/tree')
-    const folders = flatten(treeRes.data.data)
-    folderDict.value = Object.fromEntries(folders.map(f => [f.id, f]))
-  } catch (error) {
-    console.error("加载文件信息失败：", error)
-    alert("加载文件信息失败，请检查后端是否正常运行")
-  }
-}
-
-// 展平文件夹树
-const flatten = (tree) => {
-  const result = []
-  const dfs = (nodes) => {
-    for (const node of nodes) {
-      result.push({ id: node.id, name: node.name, parent_id: node.parent_id })
-      if (node.children) dfs(node.children)
-    }
-  }
-  dfs(tree)
-  return result
-}
-
-const buildFullPath = (id) => {
-  const path = []
-  let current = folderDict.value[id]
-  while (current) {
-    path.unshift(current.name)
-    current = folderDict.value[current.parent_id]
-  }
-  return path
-}
 
 const formatDate = (str) => new Date(str).toLocaleString()
 const formatSize = (bytes) => `${(bytes / 1024).toFixed(1)} KB`
@@ -232,7 +195,7 @@ const editFile = () => {
   alert("跳转到文件编辑页面（暂不实现）")
 }
 
-onMounted(() => loadFileData())
+// onMounted(() => loadFileData())
 </script>
 
 <style scoped>
