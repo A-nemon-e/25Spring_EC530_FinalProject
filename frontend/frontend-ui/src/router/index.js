@@ -10,7 +10,12 @@ const routes = [
   { path: '/folder/:id', component: FolderExplorer },
   { path: '/file/:id', component: FileDetail },
   // 可选扩展
-  { path: '/tag-manager', component: { template: '<div>标签管理占位</div>' }},
+  {
+  path: '/tag-manager',
+  name: 'TagManager',
+  component: () => import('../views/TagManager.vue')
+},
+
   { path: '/alias-manager', component: { template: '<div>别名管理占位</div>' }},
 ]
 
