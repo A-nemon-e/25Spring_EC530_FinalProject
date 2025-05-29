@@ -45,9 +45,13 @@
           <span class="menu-icon">🏷️</span>
           <span class="menu-text">标签管理</span>
         </el-menu-item>
-        <el-menu-item index="/alias-manager" class="menu-item settings-item">
-          <span class="menu-icon">🔁</span>
-          <span class="menu-text">别名设置</span>
+        <el-menu-item index="/upload-file" class="menu-item settings-item">
+          <span class="menu-icon">📤</span>
+          <span class="menu-text">上传文件</span>
+        </el-menu-item>
+        <el-menu-item index="/tagger" class="menu-item settings-item">
+          <span class="menu-icon">⚙</span>
+          <span class="menu-text">文件打标</span>
         </el-menu-item>
       </el-menu>
     </div>
