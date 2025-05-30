@@ -15,7 +15,7 @@
           <span class="menu-icon">🔍</span>
           <span class="menu-text">搜索</span>
         </el-menu-item>
-        <el-menu-item class="menu-item" @click="goToRootFolder">
+        <el-menu-item class="menu-item" @click="goToRootFolderOnce">
           <span class="menu-icon">📂</span>
           <span class="menu-text">文件夹视图</span>
         </el-menu-item>
@@ -60,27 +60,37 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFolderExplorerStore } from '../stores/folderStore'
 import { useFileStore } from '../stores/fileStore'
+import axios from 'axios'
 
 const store = useFolderExplorerStore()
 const fileStore = useFileStore()
 const route = useRoute()
 const router = useRouter()
 
-const goToRootFolder = async () => {
+const hasNavigatedToFolder = ref(false)
+
+const goToRootFolderOnce = async () => {
+  if (hasNavigatedToFolder.value) {
+    // 后续点击：用 pinia 中的 folderId 正常跳转
+    router.push(folderViewRoute.value)
+    return
+  }
   try {
     const res = await axios.get('/api/folders/tree')
-    const root = res.data.data.find(f => f.parent === null)
+    const root = res.data.data.find(f => f.parent_id === null)
     if (root) {
+      hasNavigatedToFolder.value = true
+      store.folderId = root.id // 更新 pinia 中的 folderId
       router.push(`/folder/${root.id}`)
     } else {
-      ElMessage.error('未找到根目录')
+      alert('未找到根目录')
     }
   } catch (err) {
-    ElMessage.error('加载根目录失败')
+    alert(err+'加载根目录失败')
   }
 }
 
