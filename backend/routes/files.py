@@ -1,5 +1,5 @@
 import os
-from flask import Blueprint, request
+from flask import Blueprint, request, send_file
 from werkzeug.utils import secure_filename
 from database import get_db
 from utils.idgen import generate_uuid
@@ -575,4 +575,47 @@ def delete_file(file_id):
         cursor.execute("DELETE FROM files WHERE id = ?", (file_id,))
 
     return success({"deleted_file_id": file_id}, 200)
+
+@files_bp.route("/download/<file_id>", methods=["GET"])
+def download_file(file_id):
+    """
+    通过文件 ID 下载文件
+    ---
+    tags:
+      - 文件
+    parameters:
+      - name: file_id
+        in: path
+        type: string
+        required: true
+        description: 要下载的文件 ID
+    responses:
+      200:
+        description: 成功下载文件
+        schema:
+          type: file
+      404:
+        description: 文件未找到
+    """
+    with get_db() as (conn, cursor):
+        cursor.execute("SELECT name, upload_path FROM files WHERE id = ?", (file_id,))
+        file = cursor.fetchone()
+        if not file:
+            return error("文件不存在", 404)
+
+        upload_path = file["upload_path"]
+        original_name = file["name"]
+
+        if not os.path.exists(upload_path):
+            return error("文件丢失或已被删除", 404)
+
+        try:
+            return send_file(
+                upload_path,
+                as_attachment=True,
+                download_name=original_name,
+                mimetype="application/pdf"
+            )
+        except Exception as e:
+            return error(f"文件下载失败：{str(e)}", 500)
 

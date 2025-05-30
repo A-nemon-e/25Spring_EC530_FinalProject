@@ -108,7 +108,7 @@ def get_all_descendant_folder_ids(folder_id, cursor):
 @folders_bp.route("/<folder_id>", methods=["DELETE"])
 def delete_folder(folder_id):
     """
-    删除指定文件夹（含所有子文件夹）
+    删除指定文件夹（含所有子文件夹）（实际上文件夹为空，不含子文件夹和文件才能删除）
     ---
     tags:
       - 文件夹
