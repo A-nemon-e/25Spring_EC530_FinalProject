@@ -63,6 +63,11 @@
               <span class="btn-icon">✏️</span>
               编辑
             </el-button>
+            <el-button type="danger" size="large" class="danger-btn" @click="deleteFile">
+              <span class="btn-icon">🗑️</span>
+              删除文件
+            </el-button>
+
           </div>
         </div>
       </div>
@@ -222,6 +227,33 @@ const editFile = () => {
     query: { id: fileData.value?.id }
   })
 }
+const deleteFile = async () => {
+  if (!fileData.value?.id) {
+    alert('无法删除：文件 ID 缺失')
+    return
+  }
+
+  const confirmed = window.confirm('确定要删除此文件吗？此操作无法撤销。')
+  if (!confirmed) return
+
+  try {
+    const response = await fetch(`http://localhost:5000/api/files/${fileData.value.id}`, {
+      method: 'DELETE'
+    })
+    const data = await response.json()
+
+    if (data.code === 200) {
+      alert('文件删除成功')
+      router.back()  // 🔁 返回上一页
+    } else {
+      alert('删除失败：' + (data.error || '未知错误'))
+    }
+  } catch (err) {
+    alert('删除请求失败：' + err.message)
+    console.error(err)
+  }
+}
+
 </script>
 
 <style scoped>
@@ -544,6 +576,21 @@ const editFile = () => {
   font-weight: 600;
   font-size: 16px;
 }
+.danger-btn {
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
+  border: none;
+  color: white;
+  padding: 12px 24px;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(255, 77, 79, 0.3);
+  transition: all 0.3s ease;
+}
+
+.danger-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 77, 79, 0.4);
+}
+
 
 @media (max-width: 768px) {
   .header-section {
