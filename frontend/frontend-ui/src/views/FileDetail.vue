@@ -239,7 +239,7 @@ const downloadFile = async (fileId) => {
     // 释放 URL 对象
     window.URL.revokeObjectURL(url)
   } catch (err) {
-    ElMessage.error('下载失败')
+    alert(err+'下载失败')
   }
 }
 
@@ -252,7 +252,7 @@ const openTagEditor = (tag) => {
 
 const editFile = () => {
   if (!fileData.value?.id) {
-    ElMessage.warning('当前文件无 ID，无法编辑')
+    alert('当前文件无 ID，无法编辑')
     return
   }
   router.push({
