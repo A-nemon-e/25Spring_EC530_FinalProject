@@ -40,16 +40,16 @@
         <!-- 虚拟文件夹选择 -->
         <el-form-item label="保存位置">
           <el-tree-select
-            v-model="selectedFolderId"
+            v-model="selectedFolderIds"
             :data="folderTree"
             :props="{ label: 'name', children: 'children', value: 'id' }"
-            :node-key="'id'"          
+            :node-key="'id'"
             default-expand-all
             highlight-current
             check-strictly
-            placeholder="选择文件夹"
+            placeholder="选择一个或多个文件夹"
+            multiple
           />
-
         </el-form-item>
 
         <!-- 上传 PDF 文件 -->
@@ -98,33 +98,23 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
 
-// ========= 状态 =========
 const tagInput = ref('')
 const selectedTags = ref([])
-const selectedFolderId = ref(null)
+const selectedFolderIds = ref([])
 const folderTree = ref([])
 const file = ref(null)
-
-// ========= 创建标签弹窗 =========
 const dialogCreateTag = ref(false)
 const newTag = ref({ name: '', category: '' })
 
-// ========= 标签搜索 =========
 const searchTags = async (queryString, cb) => {
   try {
     const res = await axios.get('http://127.0.0.1:5000/api/tags', { params: { q: queryString } })
-    const list = res.data.data.map(tag => ({
-      value: tag.name,
-      ...tag
-    }))
+    const list = res.data.data.map(tag => ({ value: tag.name, ...tag }))
     cb(list)
   } catch (err) {
     cb([])
   }
 }
-
-// ========= 添加标签 =========
-// tagInput.value = ''
 const tryCreateTag = () => {
   newTag.value.name = tagInput.value.trim()
   if (!newTag.value.name) {
@@ -133,15 +123,10 @@ const tryCreateTag = () => {
   }
   dialogCreateTag.value = true
 }
-
-
-
-// ========= 删除标签 =========
 const removeTag = (id) => {
   selectedTags.value = selectedTags.value.filter(t => t.id !== id)
 }
 
-// ========= 分组展示 =========
 const groupedTags = computed(() => {
   const groups = {}
   for (const tag of selectedTags.value) {
@@ -151,7 +136,6 @@ const groupedTags = computed(() => {
   return groups
 })
 
-// ========= 创建标签 =========
 const createTag = async () => {
   if (!newTag.value.name || !newTag.value.category) {
     ElMessage.warning('名称和分类不能为空')
@@ -182,25 +166,19 @@ const createTag = async () => {
   }
 }
 
-
 const addTag = (tag) => {
   if (!tag || typeof tag !== 'object' || !tag.id || !tag.name) {
     ElMessage.warning('选择无效标签，请重新搜索')
     return
   }
-
   if (selectedTags.value.find(t => t.id === tag.id)) {
     ElMessage.warning('标签已添加')
     return
   }
-
   selectedTags.value.push(tag)
   tagInput.value = ''
 }
 
-
-
-// ========= 获取文件夹结构 =========
 const getFolders = async () => {
   try {
     const res = await axios.get('http://127.0.0.1:5000/api/folders/tree')
@@ -210,9 +188,7 @@ const getFolders = async () => {
   }
 }
 
-// ========= 上传逻辑 =========
 const uploadRef = ref()
-
 const onFileChange = (uploadFile) => {
   file.value = uploadFile.raw
 }
@@ -237,8 +213,7 @@ const submit = () => {
   if (!selectedTags.value.some(t => t && t.category === 'title')) {
     ElMessage.warning('必须至少选择一个 title 分类的标签')
     return
-    }
-
+  }
   uploadRef.value.submit()
 }
 
@@ -246,15 +221,14 @@ const customUpload = async (uploadOption) => {
   const formData = new FormData()
   formData.append('file', file.value)
   formData.append('tags', JSON.stringify(selectedTags.value.map(t => t.id)))
-  formData.append('folders', JSON.stringify(selectedFolderId.value ? [selectedFolderId.value] : []))
+  formData.append('folders', JSON.stringify(selectedFolderIds.value))
 
   try {
     const res = await axios.post('http://127.0.0.1:5000/api/files/upload', formData)
     ElMessage.success(res.data.status || '上传成功')
-    // 重置状态
     file.value = null
     selectedTags.value = []
-    selectedFolderId.value = null
+    selectedFolderIds.value = []
     uploadRef.value.clearFiles()
   } catch (err) {
     ElMessage.error(err.response?.data?.status || '上传失败')
