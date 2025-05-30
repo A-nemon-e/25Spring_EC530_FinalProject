@@ -199,12 +199,12 @@ const onUpdateTag = async () => {
 
 const onDeleteTag = async (tagId) => {
   try {
-    await ElMessageBox.confirm('确认删除该标签？请先删除别名（如有）', '警告', { type: 'warning' })
+    await ElMessageBox.confirm('确认删除该标签？请先删除别名/关联的文件（如有）', '警告', { type: 'warning' })
     const res = await axios.delete(`/api/tags/${tagId}`)
     ElMessage.success(res.data.status || '删除成功')
     fetchTags()
   } catch (err) {
-    if (err !== 'cancel') showError(err, '删除失败，是否还存在没有删除的别名？')
+    if (err !== 'cancel') showError(err, '删除失败，是否还存在没有删除的别名/关联的文件？')
   }
 }
 

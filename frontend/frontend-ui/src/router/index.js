@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Search from '../views/Search.vue'
 import FolderExplorer from '../views/FolderExplorer.vue'
 import FileDetail from '../views/FileDetail.vue'
+import FileTagger from '../views/FileUploader.vue'
 
 const routes = [
   { path: '/', redirect: '/search' },
@@ -15,8 +16,13 @@ const routes = [
   name: 'TagManager',
   component: () => import('../views/TagManager.vue')
 },
+{
+    path: '/upload-file',
+    name: 'FileTagger',
+    component: FileTagger
+  },
 
-  { path: '/alias-manager', component: { template: '<div>别名管理占位</div>' }},
+  // { path: '/up', component: { template: '<div>别名管理占位</div>' }},
 ]
 
 const router = createRouter({
