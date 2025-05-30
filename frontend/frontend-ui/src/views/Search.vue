@@ -1,210 +1,278 @@
 <template>
-  <div class="main-container">
-    <!-- 侧边栏 -->
-    <!-- <div class="sidebar">
-      <div class="sidebar-title">导航</div>
-      <el-menu router default-active="/search">
-        <el-menu-item index="/search">搜索</el-menu-item>
-        <el-menu-item index="/folder/0">文件夹视图</el-menu-item>
-        <el-divider />
-        <el-menu-item disabled>标签管理（待开发）</el-menu-item>
-        <el-menu-item disabled>别名设置（待开发）</el-menu-item>
-      </el-menu>
-    </div> -->
-
-    <!-- 主体 -->
-    <div class="content-area">
-      <div style="padding: 24px">
-        <!-- 搜索栏 -->
-        <el-row :gutter="12">
-          <el-input v-model="keyword" placeholder="请输入关键词..." style="width: 300px" />
-          <el-select v-model="mode" placeholder="搜索类型" style="width: 150px">
-            <el-option label="标签" value="tag" />
-            <el-option label="文件夹" value="folder" />
-          </el-select>
-          <el-button type="primary" @click="search">搜索</el-button>
-        </el-row>
-
-        <!-- 已选标签/文件夹栏 -->
-        <el-space v-if="selectedItems.length > 0" wrap style="margin-top: 12px">
-          <el-tag
-            v-for="item in selectedItems"
-            :key="`${item.type}-${item.id}`"
-            closable
-            @close="removeItem(item)"
-            type="primary"
-            style="font-size: 15px; padding: 15px 8px;"
-          >
-            {{ item.name }}
-          </el-tag>
-          <el-button type="success" @click="searchFiles" style="font-size: 14px; padding: 1px 8px;">
-            搜索文件（共 {{ selectedItems.length }} 项）
-          </el-button>
-        </el-space>
-
-        <!-- 标签搜索结果 -->
-        <div v-if="tags.length > 0" style="margin-top: 24px">
-          <div v-for="(tagGroup, category) in groupedTags" :key="category" style="margin-bottom: 24px">
-            <el-divider content-position="left">
-              <span class="category-divider-text">{{ category }}</span>
-            </el-divider>
-
-            <el-space wrap size="large">
-              <el-card
-                v-for="tag in tagGroup"
-                :key="tag.id"
-                style="width: 280px; background: #fdfdfd"
-                shadow="hover"
-              >
-                <div>
-                  <div style="font-weight: bold; font-size: 16px;">{{ tag.name }}</div>
-                  <div style="margin-top: 6px; min-height: 32px;">
-                    <template v-if="tag.aliases.length > 0">
-                      <el-tag
-                        v-for="alias in tag.aliases"
-                        :key="alias.id"
-                        type="info"
-                        size="small"
-                        effect="plain"
-                        style="margin-right: 4px;"
-                      >
-                        {{ alias.name }}
-                      </el-tag>
-                    </template>
-                    <template v-else>
-                      <el-tag type="info" size="small" disabled>无别名</el-tag>
-                    </template>
-                  </div>
-
-                  <div style="margin-top: 12px; text-align: right;">
-                    <el-button size="small" @click="manageTag(tag)">管理</el-button>
-                    <el-button size="small" type="primary" @click="addItem(tag, 'tag')">添加</el-button>
-                  </div>
-                </div>
-              </el-card>
-            </el-space>
+  <div class="search-container">
+    <div class="content-wrapper">
+      <!-- 搜索头部区域 -->
+      <div class="search-header">
+        <h1 class="page-title">🔍 搜索</h1>
+        <div class="search-bar">
+          <div class="search-inputs">
+            <el-input 
+              v-model="keyword" 
+              placeholder="请输入关键词..." 
+              class="keyword-input"
+              size="large"
+            >
+              <template #prefix>
+                <span class="input-icon">🔎</span>
+              </template>
+            </el-input>
+            <el-select 
+              v-model="mode" 
+              placeholder="搜索类型" 
+              class="mode-select"
+              size="large"
+            >
+              <el-option label="🏷️ 标签" value="tag" />
+              <el-option label="📁 文件夹" value="folder" />
+            </el-select>
+            <el-button 
+              type="primary" 
+              @click="search" 
+              size="large"
+              class="search-btn"
+            >
+              <span class="btn-icon">🚀</span>
+              搜索
+            </el-button>
           </div>
         </div>
+      </div>
 
-        <!-- 文件夹搜索结果 -->
-        <div v-if="folders.length > 0" style="margin-top: 24px">
-          <el-divider content-position="left">
-            <span class="category-divider-text">文件夹搜索结果</span>
-          </el-divider>
-
-          <el-card
-            v-for="folder in folders"
-            :key="folder.id"
-            style="margin-bottom: 12px"
-            shadow="hover"
+      <!-- 固定的已选标签栏 -->
+      <div v-if="selectedItems.length > 0" class="selected-items-bar">
+        <div class="selected-items-content">
+          <div class="selected-title">
+            <span class="title-icon">✨</span>
+            已选择 ({{ selectedItems.length }})
+          </div>
+          <div class="selected-tags">
+            <el-tag
+              v-for="item in selectedItems"
+              :key="`${item.type}-${item.id}`"
+              closable
+              @close="removeItem(item)"
+              type="primary"
+              size="large"
+              class="selected-tag"
+            >
+              <span class="tag-type-icon">{{ item.type === 'tag' ? '🏷️' : '📁' }}</span>
+              {{ item.name }}
+            </el-tag>
+          </div>
+          <el-button 
+            type="success" 
+            @click="searchFiles" 
+            size="large"
+            class="search-files-btn"
           >
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <div style="font-size: 14px;">
-                <el-icon><Folder /></el-icon>
-                <span style="margin-left: 8px;">{{ folder.full_path.join(" / ") }}</span>
+            <span class="btn-icon">📋</span>
+            搜索文件
+          </el-button>
+        </div>
+      </div>
+
+      <!-- 标签搜索结果 -->
+      <div v-if="tags.length > 0" class="search-results-section">
+        <h3 class="section-title">🏷️ 标签搜索结果</h3>
+        <div class="tags-container">
+          <div 
+            v-for="(tagGroup, category) in groupedTags" 
+            :key="category" 
+            class="tag-category-group"
+          >
+            <div class="category-header" @click="toggleCategory(category)">
+              <div class="category-info">
+                <span class="category-name">{{ category }}</span>
+                <el-tag size="small" type="info" class="count-tag">{{ tagGroup.length }}</el-tag>
               </div>
-              <div>
-                <el-button
-                  size="small"
-                  @click="openFolder(folder.id)"
-                  style="margin-right: 8px"
-                >
-                  查看
-                </el-button>
-                <el-button size="small" type="primary" @click="addItem(folder, 'folder')">添加</el-button>
+              <div class="category-actions">
+                <span class="expand-icon" :class="{ 'expanded': !collapsedCategories[category] }">
+                  {{ collapsedCategories[category] ? '▶️' : '🔽' }}
+                </span>
               </div>
             </div>
-          </el-card>
+            
+            <div 
+              v-show="!collapsedCategories[category]" 
+              class="tag-grid"
+            >
+              <div
+                v-for="tag in tagGroup"
+                :key="tag.id"
+                class="tag-card"
+              >
+                <div class="tag-card-content">
+                  <div class="tag-main-info">
+                    <div class="tag-name">{{ tag.name }}</div>
+                    <div class="tag-aliases">
+                      <template v-if="tag.aliases.length > 0">
+                        <el-tag
+                          v-for="alias in tag.aliases"
+                          :key="alias.id"
+                          type="info"
+                          size="small"
+                          effect="plain"
+                          class="alias-tag"
+                        >
+                          {{ alias.name }}
+                        </el-tag>
+                      </template>
+                      <template v-else>
+                        <span class="no-alias">暂无别名</span>
+                      </template>
+                    </div>
+                  </div>
+                  
+                  <div class="tag-actions">
+                    <el-button size="small" class="manage-btn" @click="manageTag(tag)">
+                      <span class="btn-icon">⚙️</span>
+                      管理
+                    </el-button>
+                    <el-button 
+                      size="small" 
+                      type="primary" 
+                      class="add-btn"
+                      @click="addItem(tag, 'tag')"
+                    >
+                      <span class="btn-icon">➕</span>
+                      添加
+                    </el-button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
 
-        <!-- 文件搜索结果 -->
-        <div v-if="fileResults.length > 0" id="file-result-block" style="margin-top: 40px">
-          <el-divider content-position="left">
-            <span class="category-divider-text">文件搜索结果</span>
-          </el-divider>
+      <!-- 文件夹搜索结果 -->
+      <div v-if="folders.length > 0" class="search-results-section">
+        <h3 class="section-title">📁 文件夹搜索结果</h3>
+        <div class="folder-list">
+          <div
+            v-for="folder in folders"
+            :key="folder.id"
+            class="folder-card"
+          >
+            <div class="folder-info">
+              <div class="folder-icon">📁</div>
+              <div class="folder-path">{{ folder.full_path.join(" / ") }}</div>
+            </div>
+            <div class="folder-actions">
+              <el-button
+                size="small"
+                class="view-btn"
+                @click="openFolder(folder.id)"
+              >
+                <span class="btn-icon">👁️</span>
+                查看
+              </el-button>
+              <el-button 
+                size="small" 
+                type="primary" 
+                class="add-btn"
+                @click="addItem(folder, 'folder')"
+              >
+                <span class="btn-icon">➕</span>
+                添加
+              </el-button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-          <el-card
+      <!-- 文件搜索结果 -->
+      <div v-if="fileResults.length > 0" id="file-result-block" class="search-results-section">
+        <h3 class="section-title">📄 文件搜索结果</h3>
+        <div class="file-list">
+          <div
             v-for="file in fileResults"
             :key="file.id"
-            style="margin-bottom: 14px"
-            shadow="hover"
+            class="file-card"
           >
-            <div style="display: flex; justify-content: space-between;">
-              <div>
-                <div style="font-weight: bold; font-size: 16px;">
-                  {{ getFileTitle(file) }}
+            <div class="file-main-content">
+              <div class="file-header">
+                <div class="file-title">{{ getFileTitle(file) }}</div>
+                <div class="file-actions">
+                  <el-button size="small" type="primary" class="download-btn">
+                    <span class="btn-icon">⬇️</span>
+                    下载
+                  </el-button>
+                  <el-button 
+                    size="small" 
+                    class="detail-btn"
+                    @click.stop="goToFileDetail(file.id)"
+                  >
+                    <span class="btn-icon">📋</span>
+                    详情
+                  </el-button>
                 </div>
-                <div v-if="getTitleAliases(file).length > 0" style="font-size: 12px; color: gray;">
-                  别名：{{ getTitleAliases(file).join(" / ") }}
+              </div>
+              
+              <div v-if="getTitleAliases(file).length > 0" class="file-aliases">
+                <span class="aliases-label">别名：</span>
+                <span class="aliases-text">{{ getTitleAliases(file).join(" / ") }}</span>
+              </div>
+              
+              <div class="file-meta">
+                <div class="meta-item">
+                  <span class="meta-icon">📅</span>
+                  <span class="meta-text">{{ formatDate(file.uploaded_at) }}</span>
                 </div>
-                <div style="font-size: 12px; color: gray; margin-top: 4px;">
-                  上传时间：{{ formatDate(file.uploaded_at) }}
-                </div>
-                <div v-if="file.folders.length > 0" style="margin-top: 6px; font-size: 12px;">
-                  所属路径：
+              </div>
+              
+              <div v-if="file.folders.length > 0" class="file-folders">
+                <span class="folders-label">📂 所属路径：</span>
+                <div class="folder-paths">
                   <span
                     v-for="folder in file.folders"
                     :key="folder.id"
                     @click="goToFolder(folder.id)"
-                    style="margin-right: 12px; color: #409EFF; cursor: pointer; text-decoration: underline;"
+                    class="folder-path-link"
                   >
                     {{ folder.full_path.join(" / ") }}
                   </span>
                 </div>
-                <div style="margin-top: 8px;">
-                  <el-tag
-                    v-for="tag in getOtherTags(file)"
-                    :key="tag.id"
-                    :color="searchStore.getCategoryColor(tag.category)"
-                    size="small"
-                    style="margin-right: 6px; color: #505055; font-size: 14px; padding: 6px 10px;"
-                  >
-                    {{ tag.name }}（{{ tag.category }}）
-                  </el-tag>
-                </div>
               </div>
-              <div style="text-align: right;">
-                <el-button size="small" type="primary">下载</el-button>
-                <el-button size="small" @click.stop="goToFileDetail(file.id)">详情</el-button>
+              
+              <div v-if="getOtherTags(file).length > 0" class="file-tags">
+                <el-tag
+                  v-for="tag in getOtherTags(file)"
+                  :key="tag.id"
+                  :style="{ backgroundColor: searchStore.getCategoryColor(tag.category) }"
+                  size="small"
+                  class="file-tag"
+                >
+                  {{ tag.name }}（{{ tag.category }}）
+                </el-tag>
               </div>
             </div>
-          </el-card>
-
-          <div style="text-align: center; margin-top: 20px;">
-            <el-pagination
-              background
-              layout="prev, pager, next"
-              :total="fileTotal"
-              :page-size="pageSize"
-              :current-page="currentPage"
-              @current-change="handlePageChange"
-            />
           </div>
+        </div>
+
+        <div class="pagination-container">
+          <el-pagination
+            background
+            layout="prev, pager, next"
+            :total="fileTotal"
+            :page-size="pageSize"
+            :current-page="currentPage"
+            @current-change="handlePageChange"
+          />
         </div>
       </div>
     </div>
   </div>
 </template>
+
 <script setup>
-// import { ref, computed, nextTick } from 'vue'
-import { computed, nextTick } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSearchStore } from '../stores/searchStore'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import { Folder } from '@element-plus/icons-vue'
 
 const router = useRouter()
-
-// const keyword = ref('')
-// const mode = ref('tag')
-// const tags = ref([])
-// const folders = ref([])
-// const selectedItems = ref([])
-// const fileResults = ref([])
-// const fileTotal = ref(0)
-// const currentPage = ref(1)
-// const pageSize = ref(20)
 const searchStore = useSearchStore()
 const {
   keyword,
@@ -218,7 +286,10 @@ const {
   pageSize
 } = storeToRefs(searchStore)
 
-// ✅ 标签分类分组
+// 分类折叠状态
+const collapsedCategories = ref({})
+
+// 标签分类分组
 const groupedTags = computed(() => {
   const groups = {}
   for (const tag of tags.value) {
@@ -228,27 +299,12 @@ const groupedTags = computed(() => {
   return groups
 })
 
-// // ✅ 颜色映射
-// const categoryColorMap = ref({})
-// const availableColors = [
-//   '#f7e1d7', '#edbfb8', '#dedbd2', '#b0c4b1',
-//   '#4a5759', '#78290f', '#b8b8ff', '#E84393'
-// ]
-// let colorIndex = 0
-// const getCategoryColor = (category) => {
-//   if (!categoryColorMap.value[category]) {
-//     categoryColorMap.value[category] = availableColors[colorIndex % availableColors.length]
-//     colorIndex++
-//   }
-//   return categoryColorMap.value[category]
-// }
+// 切换分类展开/收起
+const toggleCategory = (category) => {
+  collapsedCategories.value[category] = !collapsedCategories.value[category]
+}
 
-
-// 使用方法（在模板或 JS 中）
-
-
-
-// ✅ 搜索标签或文件夹
+// 搜索标签或文件夹
 const search = async () => {
   if (mode.value === 'tag') {
     const res = await axios.get('http://localhost:5000/api/tags', { params: { q: keyword.value } })
@@ -263,59 +319,59 @@ const search = async () => {
   }
 }
 
-// ✅ 添加已选项
+// 添加已选项
 const addItem = (item, type) => {
   if (!selectedItems.value.find(t => t.id === item.id && t.type === type)) {
     selectedItems.value.push({ id: item.id, name: item.name, type })
   }
 }
 
-// ✅ 移除已选项
+// 移除已选项
 const removeItem = (item) => {
   selectedItems.value = selectedItems.value.filter(t => !(t.id === item.id && t.type === item.type))
 }
 
-// ✅ 跳转管理标签（预留）
+// 跳转管理标签
 const manageTag = (tag) => {
   alert(`跳转管理标签：${tag.name}`)
 }
 
-// ✅ 跳转文件夹页面
+// 跳转文件夹页面
 const openFolder = (folderId) => {
   router.push(`/folder/${folderId}`)
 }
 
-// ✅ 跳转文件详情页
+// 跳转文件详情页
 const goToFileDetail = (fileId) => {
   router.push(`/file/${fileId}`)
 }
 
-// ✅ 获取主标题
+// 获取主标题
 const getFileTitle = (file) => {
   const titleTag = file.tags.find(t => t.category === 'title')
   return titleTag ? titleTag.name : `[无标题] - ${file.name}`
 }
 
-// ✅ 获取 title 别名
+// 获取 title 别名
 const getTitleAliases = (file) => {
   const titleTag = file.tags.find(t => t.category === 'title')
   return titleTag?.aliases?.map(a => a.name) || []
 }
 
-// ✅ 其他标签（非 title）
+// 其他标签（非 title）
 const getOtherTags = (file) => {
   return file.tags.filter(t => t.category !== 'title')
 }
 
-// ✅ 格式化时间
+// 格式化时间
 const formatDate = (ts) => new Date(ts).toLocaleString()
 
-// ✅ 跳转到文件夹
+// 跳转到文件夹
 const goToFolder = (folderId) => {
   router.push(`/folder/${folderId}`)
 }
 
-// ✅ 实际请求
+// 实际请求
 const fetchFiles = async () => {
   const tagIds = selectedItems.value.filter(i => i.type === 'tag').map(i => i.id)
   const folderIds = selectedItems.value.filter(i => i.type === 'folder').map(i => i.id)
@@ -338,7 +394,7 @@ const fetchFiles = async () => {
   }
 }
 
-// ✅ 搜索文件并滚动
+// 搜索文件并滚动
 const searchFiles = async () => {
   currentPage.value = 1
   await fetchFiles()
@@ -352,33 +408,521 @@ const handlePageChange = (page) => {
   currentPage.value = page
   fetchFiles()
 }
-
-
-
 </script>
 
 <style scoped>
-.main-container {
-  display: flex;
-}
-.sidebar {
-  width: 200px;
-  padding: 16px;
-  border-right: 1px solid #ddd;
+.search-container {
   min-height: 100vh;
+  background: linear-gradient(135deg, #f8faff 0%, #e6f3ff 100%);
+  padding: 32px;
 }
-.sidebar-title {
-  font-weight: bold;
+
+.content-wrapper {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.search-header {
+  background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+  border-radius: 20px;
+  padding: 32px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 32px rgba(24, 144, 255, 0.12);
+  border: 1px solid #e6f3ff;
+}
+
+.page-title {
+  font-size: 30px;
+  font-weight: 700;
+  color: #1890ff;
+  margin: 0 0 24px 0;
+  text-align: center;
+}
+
+.search-bar {
+  display: flex;
+  justify-content: center;
+}
+
+.search-inputs {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.keyword-input {
+  width: 320px;
+}
+
+.keyword-input :deep(.el-input__inner) {
+  border-radius: 12px;
+  border: 2px solid #d6e9ff;
+  transition: all 0.3s ease;
+}
+
+.keyword-input :deep(.el-input__inner:focus) {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.mode-select {
+  width: 160px;
+}
+
+.mode-select :deep(.el-select__wrapper) {
+  border-radius: 12px;
+  border: 2px solid #d6e9ff;
+}
+
+.search-btn {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  border: none;
+  padding: 12px 24px;
+  font-weight: 600;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(24, 144, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.search-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(24, 144, 255, 0.4);
+}
+
+.input-icon, .btn-icon {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+/* 固定已选标签栏 */
+.selected-items-bar {
+  position: sticky;
+  top: 20px;
+  z-index: 100;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 32px rgba(24, 144, 255, 0.15);
+  border: 2px solid #d6e9ff;
+}
+
+.selected-items-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.selected-title {
+  font-weight: 600;
+  color: #1890ff;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.title-icon {
+  margin-right: 8px;
   font-size: 18px;
+}
+
+.selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  
+  gap: 8px;
+  flex: 1;
+}
+
+.selected-tag {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  border: none;
+  padding: 8px 10px;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 500;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.tag-type-icon {
+  margin-right: 6px;
+}
+
+.search-files-btn {
+  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+  border: none;
+  padding: 10px 20px;
+  font-weight: 600;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(82, 196, 26, 0.3);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.search-files-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(82, 196, 26, 0.4);
+}
+
+/* 搜索结果区域 */
+.search-results-section {
+  background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+  border-radius: 20px;
+  padding: 32px;
+  margin-bottom: 32px;
+  box-shadow: 0 8px 32px rgba(24, 144, 255, 0.12);
+  border: 1px solid #e6f3ff;
+}
+
+.section-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1890ff;
+  margin: 0 0 24px 0;
+}
+
+/* 标签分类组 */
+.tags-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.tag-category-group {
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f8faff 0%, #f0f7ff 100%);
+  border: 1px solid #d6e9ff;
+  overflow: hidden;
+}
+
+.category-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #e6f3ff 0%, #d6e9ff 100%);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.category-header:hover {
+  background: linear-gradient(135deg, #d6e9ff 0%, #bae0ff 100%);
+}
+
+.category-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.category-name {
+  font-weight: 600;
+  color: #1890ff;
+  font-size: 18px;
+}
+
+.count-tag {
+  background: #1890ff;
+  color: white;
+  border: none;
+}
+
+.expand-icon {
+  font-size: 16px;
+  transition: transform 0.3s ease;
+}
+
+.expand-icon.expanded {
+  transform: rotate(0deg);
+}
+
+.tag-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  padding: 20px;
+}
+
+.tag-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+  border: 1px solid #d6e9ff;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.tag-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(24, 144, 255, 0.2);
+}
+
+.tag-card-content {
+  padding: 20px;
+}
+
+.tag-main-info {
   margin-bottom: 16px;
 }
-.content-area {
-  flex: 1;
-  background-color: #fafafa;
+
+.tag-name {
+  font-weight: 600;
+  font-size: 16px;
+  color: #2c3e50;
+  margin-bottom: 8px;
 }
-.category-divider-text {
+
+.tag-aliases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 24px;
+  align-items: center;
+}
+
+.alias-tag {
+  font-size: 13px;
+  padding: 4px 8px;
+}
+
+.no-alias {
+  color: #8c9eff;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.tag-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.manage-btn {
+  background: linear-gradient(135deg, #f8faff 0%, #e6f3ff 100%);
+  border: 1px solid #d6e9ff;
+  color: #1890ff;
+}
+
+.add-btn {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  border: none;
+  color: white;
+}
+
+/* 文件夹列表 */
+.folder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.folder-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #f8faff 0%, #f0f7ff 100%);
+  border: 1px solid #d6e9ff;
+  border-radius: 12px;
+  padding: 16px 20px;
+  transition: all 0.3s ease;
+}
+
+.folder-card:hover {
+  background: linear-gradient(135deg, #e6f3ff 0%, #f0f7ff 100%);
+  transform: translateX(4px);
+  box-shadow: 0 4px 16px rgba(24, 144, 255, 0.15);
+}
+
+.folder-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.folder-icon {
+  font-size: 20px;
+}
+
+.folder-path {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.folder-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.view-btn {
+  background: linear-gradient(135deg, #f8faff 0%, #e6f3ff 100%);
+  border: 1px solid #d6e9ff;
+  color: #1890ff;
+}
+
+/* 文件列表 */
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.file-card {
+  background: linear-gradient(135deg, #f8faff 0%, #f0f7ff 100%);
+  border: 1px solid #d6e9ff;
+  border-radius: 16px;
+  padding: 24px;
+  transition: all 0.3s ease;
+}
+
+.file-card:hover {
+  background: linear-gradient(135deg, #e6f3ff 0%, #f0f7ff 100%);
+  box-shadow: 0 8px 24px rgba(24, 144, 255, 0.15);
+}
+
+.file-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.file-title {
+  font-weight: 600;
   font-size: 18px;
-  font-weight: bold;
-  color: #409EFF;
+  color: #2c3e50;
+  flex: 1;
+}
+
+.file-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.download-btn {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  border: none;
+  color: white;
+}
+
+.detail-btn {
+  background: linear-gradient(135deg, #f8faff 0%, #e6f3ff 100%);
+  border: 1px solid #d6e9ff;
+  color: #1890ff;
+}
+
+.file-aliases {
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.aliases-label {
+  color: #8c9eff;
+  font-weight: 500;
+}
+
+.aliases-text {
+  color: #5a6c7d;
+}
+
+.file-meta {
+  margin-bottom: 12px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #5a6c7d;
+}
+
+.meta-icon {
+  margin-right: 6px;
+}
+
+.file-folders {
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.folders-label {
+  color: #1890ff;
+  font-weight: 500;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.folder-paths {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.folder-path-link {
+  color: #1890ff;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 0.3s ease;
+}
+
+.folder-path-link:hover {
+  color: #40a9ff;
+}
+
+.file-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.file-tag {
+  color: #2c3e50 !important;
+  font-size: 12px;
+  padding: 4px 8px;
+  border: none;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e6f3ff;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .search-container {
+    padding: 16px;
+  }
+  
+  .search-inputs {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .keyword-input, .mode-select {
+    width: 100%;
+  }
+  
+  .selected-items-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .tag-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .file-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .file-actions {
+    align-self: flex-end;
+  }
 }
 </style>
