@@ -55,7 +55,7 @@
 
           <!-- 操作按钮 -->
           <div class="action-buttons">
-            <el-button @click="downloadFile(fileId)" type="primary" size="large" class="primary-btn">
+            <el-button @click="downloadFile(fileData.id)" type="primary" size="large" class="primary-btn">
               <span class="btn-icon">⬇️</span>
               下载文件
             </el-button>
