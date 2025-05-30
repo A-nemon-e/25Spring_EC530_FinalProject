@@ -8,10 +8,10 @@ export const useFileStore = defineStore('file', () => {
   const folderDict = ref({})
 
   const loadFileData = async (id) => {
-    const res = await axios.get(`http://localhost:5000/api/files/${id}`)
+    const res = await axios.get(`/api/files/${id}`)
     fileData.value = res.data.data
 
-    const treeRes = await axios.get('http://localhost:5000/api/folders/tree')
+    const treeRes = await axios.get('/api/folders/tree')
     const folders = flatten(treeRes.data.data)
     folderDict.value = Object.fromEntries(folders.map(f => [f.id, f]))
   }

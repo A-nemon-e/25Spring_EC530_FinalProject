@@ -262,7 +262,7 @@ const openRenameDialog = (folder) => {
 // 执行重命名请求
 const renameFolder = async () => {
   try {
-    const response = await fetch(`http://localhost:5000/api/folders/${renameTargetId.value}/rename`, {
+    const response = await fetch(`/api/folders/${renameTargetId.value}/rename`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
@@ -297,7 +297,7 @@ const handleSearch = async () => {
   }
   
   try {
-    const response = await fetch(`http://localhost:5000/api/folders/search?q=${encodeURIComponent(searchQuery.value)}`)
+    const response = await fetch(`/api/folders/search?q=${encodeURIComponent(searchQuery.value)}`)
     const data = await response.json()
     if (data.code === 200) {
       searchResults.value = data.data || []
@@ -312,7 +312,7 @@ const createFolder = async () => {
   if (!newFolderName.value.trim()) return
   
   try {
-    const response = await fetch('http://localhost:5000/api/folders', {
+    const response = await fetch('/api/folders', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -348,7 +348,7 @@ const deleteFolder = async (folderId) => {
   if (!confirm('确定要删除这个文件夹吗？')) return
   
   try {
-    const response = await fetch(`http://localhost:5000/api/folders/${folderId}`, {
+    const response = await fetch(`/api/folders/${folderId}`, {
       method: 'DELETE'
     })
     const data = await response.json()

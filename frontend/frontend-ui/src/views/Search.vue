@@ -307,13 +307,13 @@ const toggleCategory = (category) => {
 // 搜索标签或文件夹
 const search = async () => {
   if (mode.value === 'tag') {
-    const res = await axios.get('http://localhost:5000/api/tags', { params: { q: keyword.value } })
+    const res = await axios.get('/api/tags', { params: { q: keyword.value } })
     tags.value = res.data.data
     folders.value = []
     if (tags.value.length === 1) addItem(tags.value[0], 'tag')
   }
   if (mode.value === 'folder') {
-    const res = await axios.get('http://localhost:5000/api/folders/search', { params: { q: keyword.value } })
+    const res = await axios.get('/api/folders/search', { params: { q: keyword.value } })
     folders.value = res.data.data
     tags.value = []
   }
@@ -383,7 +383,7 @@ const fetchFiles = async () => {
   params.append('size', pageSize.value)
 
   try {
-    const res = await axios.get(`http://localhost:5000/api/files?${params}`)
+    const res = await axios.get(`/api/files?${params}`)
     const { files, total } = res.data.data
     fileResults.value = files || []
     fileTotal.value = total || 0

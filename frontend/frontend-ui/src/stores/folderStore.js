@@ -25,7 +25,7 @@ export const useFolderExplorerStore = defineStore('folderExplorer', () => {
   }
 
   const loadAllFolders = async () => {
-    const res = await axios.get('http://127.0.0.1:5000/api/folders/tree')
+    const res = await axios.get('/api/folders/tree')
     const folderList = flattenFolders(res.data.data)
     allFoldersDict.value = Object.fromEntries(folderList.map(f => [f.id, f]))
   }
@@ -45,7 +45,7 @@ export const useFolderExplorerStore = defineStore('folderExplorer', () => {
 const loadFolder = async (id) => {
 //   loading.value = true
   folderId.value = id
-  const res = await axios.get(`http://127.0.0.1:5000/api/folders/${id}/children`)
+  const res = await axios.get(`/api/folders/${id}/children`)
   folders.value = res.data.data.folders
   files.value = res.data.data.files
   buildCurrentPath(id)

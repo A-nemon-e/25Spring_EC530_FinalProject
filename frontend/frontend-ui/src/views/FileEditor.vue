@@ -206,7 +206,7 @@ const getCategoryTagType = (category) => {
 // 搜索标签
 const searchTags = async (queryString, cb) => {
   try {
-    const res = await axios.get('http://127.0.0.1:5000/api/tags', { params: { q: queryString } })
+    const res = await axios.get('/api/tags', { params: { q: queryString } })
     cb(res.data.data.map(tag => ({ value: tag.name, ...tag })))
   } catch {
     cb([])
@@ -255,7 +255,7 @@ const createTag = async () => {
     return
   }
   try {
-    const res = await axios.post('http://127.0.0.1:5000/api/tags', newTag.value)
+    const res = await axios.post('/api/tags', newTag.value)
     const createdTag = Array.isArray(res.data.data) ? res.data.data[0] : res.data.data
     if (!createdTag || !createdTag.id) {
       ElMessage.error('创建失败，返回格式错误')
@@ -274,7 +274,7 @@ const createTag = async () => {
 // 获取文件夹树
 const getFolders = async () => {
   try {
-    const res = await axios.get('http://127.0.0.1:5000/api/folders/tree')
+    const res = await axios.get('/api/folders/tree')
     folderTree.value = res.data.data
   } catch {
     folderTree.value = []
@@ -287,12 +287,12 @@ const loadFileData = async () => {
   if (!id) return
   loading.value = true
   try {
-    const res = await axios.get(`http://127.0.0.1:5000/api/files/${id}`)
+    const res = await axios.get(`/api/files/${id}`)
     file.value = res.data.data
     // 处理 tags
     const tagsData = file.value.tags || []
     if (tagsData.length && typeof tagsData[0] === 'number') {
-      const allTagsRes = await axios.get('http://127.0.0.1:5000/api/tags')
+      const allTagsRes = await axios.get('/api/tags')
       const allTags = allTagsRes.data.data
       selectedTags.value = allTags.filter(t => tagsData.includes(t.id))
     } else {
@@ -321,7 +321,7 @@ const submit = async () => {
     return
   }
   try {
-    const res = await axios.put(`http://127.0.0.1:5000/api/files/${id}`, {
+    const res = await axios.put(`/api/files/${id}`, {
       tags: selectedTags.value.map(t => t.id),
       folders: selectedFolderIds.value
     })

@@ -108,7 +108,7 @@ const newTag = ref({ name: '', category: '' })
 
 const searchTags = async (queryString, cb) => {
   try {
-    const res = await axios.get('http://127.0.0.1:5000/api/tags', { params: { q: queryString } })
+    const res = await axios.get('/api/tags', { params: { q: queryString } })
     const list = res.data.data.map(tag => ({ value: tag.name, ...tag }))
     cb(list)
   } catch (err) {
@@ -142,7 +142,7 @@ const createTag = async () => {
     return
   }
   try {
-    const res = await axios.post('http://127.0.0.1:5000/api/tags', newTag.value)
+    const res = await axios.post('/api/tags', newTag.value)
     // const createdTag = res.data?.data?.[0]
     const raw = res.data?.data
     const createdTag = Array.isArray(raw) ? raw[0] : raw
@@ -181,7 +181,7 @@ const addTag = (tag) => {
 
 const getFolders = async () => {
   try {
-    const res = await axios.get('http://127.0.0.1:5000/api/folders/tree')
+    const res = await axios.get('/api/folders/tree')
     folderTree.value = res.data.data
   } catch (err) {
     folderTree.value = []
@@ -224,7 +224,7 @@ const customUpload = async (uploadOption) => {
   formData.append('folders', JSON.stringify(selectedFolderIds.value))
 
   try {
-    const res = await axios.post('http://127.0.0.1:5000/api/files/upload', formData)
+    const res = await axios.post('/api/files/upload', formData)
     ElMessage.success(res.data.status || '上传成功')
     file.value = null
     selectedTags.value = []
