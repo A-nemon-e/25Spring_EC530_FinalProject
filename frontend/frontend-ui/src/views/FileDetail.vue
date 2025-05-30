@@ -55,7 +55,7 @@
 
           <!-- 操作按钮 -->
           <div class="action-buttons">
-            <el-button type="primary" size="large" class="primary-btn">
+            <el-button @click="downloadFile(fileId)" type="primary" size="large" class="primary-btn">
               <span class="btn-icon">⬇️</span>
               下载文件
             </el-button>
@@ -210,6 +210,39 @@ const currentEditingTag = ref(null)
 const formatDate = (str) => new Date(str).toLocaleString()
 const formatSize = (bytes) => `${(bytes / 1024).toFixed(1)} KB`
 const goToFolder = (id) => router.push(`/folder/${id}`)
+
+const downloadFile = async (fileId) => {
+  try {
+    const response = await axios.get(`/api/files/download/${fileId}`, {
+      responseType: 'blob', // 关键点：告诉 axios 这是一个二进制流
+    })
+
+    // 从后端 Content-Disposition 中解析文件名（可选）
+    let filename = 'downloaded.pdf'
+    const disposition = response.headers['content-disposition']
+    if (disposition && disposition.includes('filename=')) {
+      filename = decodeURIComponent(disposition.split('filename=')[1].replace(/["']/g, ''))
+    }
+
+    // 创建 blob 链接
+    const blob = new Blob([response.data], { type: 'application/pdf' })
+    const url = window.URL.createObjectURL(blob)
+
+    // 创建 a 标签触发下载
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    // 释放 URL 对象
+    window.URL.revokeObjectURL(url)
+  } catch (err) {
+    ElMessage.error('下载失败')
+  }
+}
+
 
 const openTagEditor = (tag) => {
   if (!tag && !title) return
