@@ -213,7 +213,14 @@ const openTagEditor = (tag) => {
 }
 
 const editFile = () => {
-  alert("跳转到文件编辑页面（暂不实现）")
+  if (!fileData.value?.id) {
+    ElMessage.warning('当前文件无 ID，无法编辑')
+    return
+  }
+  router.push({
+    path: '/tagger',
+    query: { id: fileData.value?.id }
+  })
 }
 </script>
 

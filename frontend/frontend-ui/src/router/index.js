@@ -4,6 +4,7 @@ import Search from '../views/Search.vue'
 import FolderExplorer from '../views/FolderExplorer.vue'
 import FileDetail from '../views/FileDetail.vue'
 import FileTagger from '../views/FileUploader.vue'
+import FileEditor from '../views/FileEditor.vue'
 
 const routes = [
   { path: '/', redirect: '/search' },
@@ -21,8 +22,13 @@ const routes = [
     name: 'FileTagger',
     component: FileTagger
   },
+  {
+    path: '/tagger',
+    name: 'FileEditor',
+    component: FileEditor,
+  },
 
-  // { path: '/up', component: { template: '<div>别名管理占位</div>' }},
+  
 ]
 
 const router = createRouter({
