@@ -15,10 +15,11 @@
           <span class="menu-icon">🔍</span>
           <span class="menu-text">搜索</span>
         </el-menu-item>
-        <el-menu-item :index="folderViewRoute" class="menu-item">
+        <el-menu-item class="menu-item" @click="goToRootFolder">
           <span class="menu-icon">📂</span>
           <span class="menu-text">文件夹视图</span>
         </el-menu-item>
+
         <el-menu-item :index="fileDetailRoute" class="menu-item">
           <span class="menu-icon">📄</span>
           <span class="menu-text">文件详情视图</span>
@@ -60,13 +61,28 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useFolderExplorerStore } from '../stores/folderStore'
 import { useFileStore } from '../stores/fileStore'
 
 const store = useFolderExplorerStore()
 const fileStore = useFileStore()
 const route = useRoute()
+const router = useRouter()
+
+const goToRootFolder = async () => {
+  try {
+    const res = await axios.get('/api/folders/tree')
+    const root = res.data.data.find(f => f.parent === null)
+    if (root) {
+      router.push(`/folder/${root.id}`)
+    } else {
+      ElMessage.error('未找到根目录')
+    }
+  } catch (err) {
+    ElMessage.error('加载根目录失败')
+  }
+}
 
 const folderViewRoute = computed(() => {
   return store.folderId ? `/folder/${store.folderId}` : '/folder'
