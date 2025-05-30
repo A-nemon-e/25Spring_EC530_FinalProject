@@ -19,6 +19,65 @@
         </div>
       </div>
 
+      <!-- 搜索和管理工具栏 -->
+<div class="toolbar-section">
+  <div class="search-area">
+    <div class="search-input-group">
+      <input 
+        v-model="searchQuery" 
+        @input="handleSearch"
+        placeholder="搜索文件夹..."
+        class="search-input"
+      />
+      <button @click="handleSearch" class="search-btn">🔍</button>
+    </div>
+  </div>
+  
+  <div class="action-area">
+    <button @click="showCreateDialog = true" class="create-btn">
+      <span class="btn-icon">➕</span>
+      新建文件夹
+    </button>
+  </div>
+</div>
+
+<!-- 搜索结果区域 -->
+<div v-if="searchResults.length > 0" class="search-results-section">
+  <h3 class="section-title">🔍 搜索结果</h3>
+  <div class="folder-grid">
+    <div
+      v-for="folder in searchResults"
+      :key="'search-' + folder.id"
+      class="folder-card"
+      @click="goToFolder(folder.id)"
+    >
+      <div class="folder-icon">📁</div>
+      
+      <div class="folder-name">{{ folder.name }}</div>
+      <div class="folder-path">{{ folder.full_path?.join(' / ') }}</div>
+      <div class="folder-actions">
+        <button @click.stop="deleteFolder(folder.id)" class="delete-btn">🗑️</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+      <!-- 创建文件夹对话框 -->
+      <div v-if="showCreateDialog" class="dialog-overlay" @click="showCreateDialog = false">
+        <div class="dialog-content" @click.stop>
+          <h3>新建文件夹</h3>
+          <div class="form-group">
+            <label>文件夹名称：</label>
+            <input v-model="newFolderName" placeholder="输入文件夹名称" class="form-input" />
+          </div>
+          <div class="dialog-actions">
+            <button @click="createFolder" class="confirm-btn">创建</button>
+            <button @click="showCreateDialog = false" class="cancel-btn">取消</button>
+          </div>
+        </div>
+      </div>
+
+
       <!-- 子文件夹区域 -->
       <div v-if="folders.length > 0" class="folders-section">
         <h3 class="section-title">📁 子文件夹</h3>
@@ -29,6 +88,9 @@
             class="folder-card"
             @click="goToFolder(folder.id)"
           >
+          <div class="folder-actions">
+  <button @click.stop="deleteFolder(folder.id)" class="delete-btn">🗑️</button>
+</div>
             <div class="folder-icon">📁</div>
             <div class="folder-name">{{ folder.name }}</div>
             <div class="folder-arrow">→</div>
@@ -123,10 +185,18 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useFolderExplorerStore } from '../stores/folderStore'
+
+
+// 新增响应式数据
+const searchQuery = ref('')
+const searchResults = ref([])
+const showCreateDialog = ref(false)
+const newFolderName = ref('')
+
 
 const route = useRoute()
 const router = useRouter()
@@ -157,6 +227,87 @@ const goToFolder = async (id) => {
 
 const goToFile = (fileId) => {
   router.push(`/file/${fileId}`)
+}
+// 搜索功能
+const handleSearch = async () => {
+  if (!searchQuery.value.trim()) {
+    searchResults.value = []
+    return
+  }
+  
+  try {
+    const response = await fetch(`http://localhost:5000/api/folders/search?q=${encodeURIComponent(searchQuery.value)}`)
+    const data = await response.json()
+    if (data.code === 200) {
+      searchResults.value = data.data || []
+    }
+  } catch (error) {
+    console.error('搜索失败:', error)
+  }
+}
+
+// 创建文件夹
+const createFolder = async () => {
+  if (!newFolderName.value.trim()) return
+  
+  try {
+    const response = await fetch('http://localhost:5000/api/folders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: newFolderName.value,
+        parent_id: route.params.id || null
+      })
+    })
+    
+    const data = await response.json()
+    if (data.code === 201) {
+      // 刷新当前文件夹
+      if (route.params.id) {
+        await loadFolder(route.params.id)
+      } else {
+        await loadAllFolders()
+      }
+      showCreateDialog.value = false
+      newFolderName.value = ''
+    }
+    else{
+      alert(data.status+data.error )
+    }
+  } catch (error) {
+    console.error('创建文件夹失败:', error)
+    alert(error)
+  }
+}
+
+// 删除文件夹
+const deleteFolder = async (folderId) => {
+  if (!confirm('确定要删除这个文件夹吗？')) return
+  
+  try {
+    const response = await fetch(`http://localhost:5000/api/folders/${folderId}`, {
+      method: 'DELETE'
+    })
+    const data = await response.json()
+    if (data.code === 200) {
+      // 刷新数据
+      if (route.params.id) {
+        await loadFolder(route.params.id)
+      } else {
+        await loadAllFolders()
+      }
+      // 清除搜索结果中的已删除项
+      searchResults.value = searchResults.value.filter(f => f.id !== folderId)
+    }
+    else{
+      console.log(data)
+      alert(data.status+data.error)}
+  } catch (error) {
+    console.error('删除文件夹失败:', error)
+    alert(data.status+data.error + error)
+  }
 }
 
 // 工具函数
@@ -589,6 +740,217 @@ const formatSize = (bytes) => {
   
   .file-actions {
     flex-direction: column;
+  }
+}
+/* 工具栏样式 */
+.toolbar-section {
+  background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+  border-radius: 20px;
+  padding: 24px 32px;
+  margin-bottom: 32px;
+  box-shadow: 0 8px 32px rgba(24, 144, 255, 0.12);
+  border: 1px solid #e6f3ff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.search-area {
+  flex: 1;
+  min-width: 200px;
+}
+
+.search-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid #d6e9ff;
+  border-radius: 12px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.search-input:focus {
+  border-color: #1890ff;
+}
+
+.search-btn, .create-btn {
+  padding: 12px 16px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.search-btn {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  color: white;
+}
+
+.create-btn {
+  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+  color: white;
+}
+
+.search-btn:hover, .create-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* 搜索结果样式 */
+.search-results-section {
+  background: linear-gradient(135deg, #fff7e6 0%, #fff2e6 100%);
+  border-radius: 20px;
+  padding: 32px;
+  margin-bottom: 32px;
+  box-shadow: 0 8px 32px rgba(250, 173, 20, 0.12);
+  border: 1px solid #ffe7ba;
+}
+
+.search-results-section .folder-card {
+  position: relative;
+}
+
+.folder-path {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.folder-actions {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.folder-card:hover .folder-actions {
+  opacity: 1;
+}
+
+.delete-btn {
+  background: #ff4d4f;
+  color: white;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-btn:hover {
+  background: #ff7875;
+}
+
+/* 对话框样式 */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog-content {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  min-width: 400px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+}
+
+.dialog-content h3 {
+  margin: 0 0 24px 0;
+  color: #1890ff;
+  font-size: 20px;
+}
+
+.form-group {
+  margin-bottom: 24px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #333;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d6e9ff;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.form-input:focus {
+  border-color: #1890ff;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.confirm-btn, .cancel-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.confirm-btn {
+  background: #1890ff;
+  color: white;
+}
+
+.cancel-btn {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.confirm-btn:hover, .cancel-btn:hover {
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .toolbar-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .dialog-content {
+    min-width: 300px;
+    margin: 20px;
   }
 }
 </style>

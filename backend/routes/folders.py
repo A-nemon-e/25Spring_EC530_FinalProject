@@ -1,6 +1,7 @@
 from flask import Blueprint, request
 from database import get_db
 from utils.idgen import generate_uuid
+from sqlite3 import IntegrityError
 from utils.response import success, error
 
 folders_bp = Blueprint("folders", __name__)
@@ -108,7 +109,7 @@ def get_all_descendant_folder_ids(folder_id, cursor):
 @folders_bp.route("/<folder_id>", methods=["DELETE"])
 def delete_folder(folder_id):
     """
-    删除指定文件夹（含所有子文件夹）（实际上文件夹为空，不含子文件夹和文件才能删除）
+    删除指定文件夹（含所有子文件夹）（实际上文件夹为空，不含子文件夹才能删除.可以包含文件）
     ---
     tags:
       - 文件夹
@@ -128,18 +129,22 @@ def delete_folder(folder_id):
         if not cursor.fetchone():
             return error("文件夹不存在", 404)
 
-        # 递归获取所有子文件夹 ID
+        # 递归获取所有子文件夹 ID（包括自身）
         all_ids = get_all_descendant_folder_ids(folder_id, cursor)
 
-        # 清理 file_folders 中的关联
-        for fid in all_ids:
-            cursor.execute("DELETE FROM file_folders WHERE folder_id = ?", (fid,))
-            cursor.execute("DELETE FROM folders WHERE id = ?", (fid,))
+        try:
+            for fid in all_ids:
+                # 删除 file_folders 中的关联（如果设计为自动删除则可跳过）
+                cursor.execute("DELETE FROM file_folders WHERE folder_id = ?", (fid,))
+                # 删除文件夹记录
+                cursor.execute("DELETE FROM folders WHERE id = ?", (fid,))
+
+        except IntegrityError as e:
+            return error("删除失败：文件夹内仍含子文件夹，请先移除所有文件", 400)
 
     return success({
         "deleted_folder_ids": all_ids
     }, 200)
-
 
 
 @folders_bp.route("/search", methods=["GET"])
