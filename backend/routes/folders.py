@@ -244,3 +244,64 @@ def get_folder_children(folder_id):
         "folders": subfolders,
         "files": files
     })
+
+@folders_bp.route("/<folder_id>/rename", methods=["PUT"])
+def rename_folder(folder_id):
+    """
+    重命名文件夹
+    ---
+    tags:
+      - 文件夹
+    parameters:
+      - name: folder_id
+        in: path
+        type: string
+        required: true
+        description: 要重命名的文件夹 ID
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+              description: 新的文件夹名称
+              example: 新文件夹名称
+    responses:
+      200:
+        description: 重命名成功
+      400:
+        description: 参数错误或重名
+      404:
+        description: 文件夹不存在
+    """
+    data = request.get_json()
+    new_name = data.get("name")
+
+    if not new_name or not isinstance(new_name, str) or new_name.strip() == "":
+        return error("必须提供合法的新文件夹名称", 400)
+
+    with get_db() as (conn, cursor):
+        # 检查文件夹是否存在
+        cursor.execute("SELECT * FROM folders WHERE id = ?", (folder_id,))
+        folder = cursor.fetchone()
+        if not folder:
+            return error("文件夹不存在", 404)
+
+        # 可选：检查同父目录下是否重名（避免重复）
+        cursor.execute("""
+            SELECT id FROM folders 
+            WHERE parent_id = ? AND name = ? AND id != ?
+        """, (folder["parent_id"], new_name.strip(), folder_id))
+        if cursor.fetchone():
+            return error("该文件夹名称在当前目录下已存在", 400)
+
+        # 执行更新
+        cursor.execute("UPDATE folders SET name = ? WHERE id = ?", (new_name.strip(), folder_id))
+
+    return success({
+        "folder_id": folder_id,
+        "new_name": new_name.strip()
+    })
+

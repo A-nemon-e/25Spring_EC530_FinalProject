@@ -41,6 +41,9 @@
   </div>
 </div>
 
+
+
+
 <!-- 搜索结果区域 -->
 <div v-if="searchResults.length > 0" class="search-results-section">
   <h3 class="section-title">🔍 搜索结果</h3>
@@ -56,6 +59,8 @@
       <div class="folder-name">{{ folder.name }}</div>
       <div class="folder-path">{{ folder.full_path?.join(' / ') }}</div>
       <div class="folder-actions">
+        <!-- 新增重命名按钮 -->
+        <button @click.stop="openRenameDialog(folder)" class="rename-btn">✏️</button>
         <button @click.stop="deleteFolder(folder.id)" class="delete-btn">🗑️</button>
       </div>
     </div>
@@ -76,6 +81,20 @@
           </div>
         </div>
       </div>
+      <!-- 重命名文件夹对话框 -->
+      <div v-if="showRenameDialog" class="dialog-overlay" @click="showRenameDialog = false">
+        <div class="dialog-content" @click.stop>
+          <h3>重命名文件夹</h3>
+          <div class="form-group">
+            <label>新名称：</label>
+            <input v-model="renameFolderName" placeholder="请输入新的文件夹名称" class="form-input" />
+          </div>
+          <div class="dialog-actions">
+            <button @click="renameFolder" class="confirm-btn">确认</button>
+            <button @click="showRenameDialog = false" class="cancel-btn">取消</button>
+          </div>
+        </div>
+      </div>
 
 
       <!-- 子文件夹区域 -->
@@ -90,6 +109,7 @@
           >
           <div class="folder-actions">
   <button @click.stop="deleteFolder(folder.id)" class="delete-btn">🗑️</button>
+  <button @click.stop="openRenameDialog(folder)" class="rename-btn">✏️</button>
 </div>
             <div class="folder-icon">📁</div>
             <div class="folder-name">{{ folder.name }}</div>
@@ -196,6 +216,10 @@ const searchQuery = ref('')
 const searchResults = ref([])
 const showCreateDialog = ref(false)
 const newFolderName = ref('')
+const showRenameDialog = ref(false)
+const renameTargetId = ref(null)
+const renameFolderName = ref('')
+
 
 
 const route = useRoute()
@@ -227,6 +251,43 @@ const goToFolder = async (id) => {
 
 const goToFile = (fileId) => {
   router.push(`/file/${fileId}`)
+}
+// 打开重命名对话框
+const openRenameDialog = (folder) => {
+  renameTargetId.value = folder.id
+  renameFolderName.value = folder.name
+  showRenameDialog.value = true
+}
+
+// 执行重命名请求
+const renameFolder = async () => {
+  try {
+    const response = await fetch(`http://localhost:5000/api/folders/${renameTargetId.value}/rename`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name: renameFolderName.value })
+    })
+    const data = await response.json()
+    if (data.code === 200) {
+      showRenameDialog.value = false
+      renameFolderName.value = ''
+      renameTargetId.value = null
+      if (route.params.id) {
+        await loadFolder(route.params.id)
+      } else {
+        await loadAllFolders()
+      }
+      searchResults.value = searchResults.value.map(f =>
+        f.id === data.data.folder_id ? { ...f, name: data.data.new_name } : f
+      )
+    } else {
+      alert(data.status + data.error)
+    }
+  } catch (err) {
+    alert('重命名失败')
+  }
 }
 // 搜索功能
 const handleSearch = async () => {
@@ -843,7 +904,7 @@ const formatSize = (bytes) => {
 }
 
 .delete-btn {
-  background: #ff4d4f;
+  background: #cf4d4f;
   color: white;
   border: none;
   width: 24px;
@@ -953,4 +1014,24 @@ const formatSize = (bytes) => {
     margin: 20px;
   }
 }
+.rename-btn {
+  background: #1890ff;
+  color: black;
+  border: none;
+  width: 24px;
+  height: 24px;
+  
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: normal;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.rename-btn:hover {
+  background: #40a9ff;
+}
+
 </style>
