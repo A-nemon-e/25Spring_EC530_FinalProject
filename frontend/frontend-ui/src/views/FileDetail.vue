@@ -167,6 +167,7 @@
 import { onMounted, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFileStore } from '../stores/fileStore'
+import axios from 'axios'
 
 const store = useFileStore()
 const route = useRoute()
